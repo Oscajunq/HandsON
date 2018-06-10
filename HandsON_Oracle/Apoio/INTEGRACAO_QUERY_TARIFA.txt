@@ -1,0 +1,206 @@
+WITH SERVICO AS
+ (SELECT S.ID_POLITICA_INTEGRACAO_TARIF,
+         S.ID_SERVICO_INTEGRACAO,
+         S.QT_EMBARQUES_PERMITIDOS,
+         SS.ID_N1_SEGMENTO_SERVICO,
+         SS.NM_N1_SEGMENTO_SERVICO,
+         CS.ID_N2_CATEGORIA_SERVICO,
+         CS.NM_N2_CATEGORIA_SERVICO,
+         SU.ID_N3_SUBCATEGORIA_SERVICO,
+         SU.NM_N3_SUBCATEGORIA_SERVICO,
+         GS.ID_N4_GRUPO_SERVICO,
+         GS.NM_N4_GRUPO_SERVICO,
+         PC.ID_PODER_CONCEDENTE,
+         PC.NM_PODER_CONCEDENTE,
+         GE.ID_GESTOR_SERVICO,
+         GE.NM_GESTOR_SERVICO,
+         ES.ID_EXECUTOR_SERVICO,
+         ES.NM_EXECUTOR_SERVICO
+    FROM TCFG_SERVICO_INTEGRACAO       S,
+         TCFG_N3_SUBCATEGORIA_SERVICO SU,
+         TCFG_N2_CATEGORIA_SERVICO    CS,
+         TCFG_N1_SEGMENTO_SERVICO     SS,
+         TCFG_N4_GRUPO_SERVICO        GS,
+         TCFG_PODER_CONCEDENTE        PC,
+         TCFG_GESTOR_SERVICO          GE,
+         TCFG_EXECUTOR_SERVICO        ES
+   WHERE 
+     S.ID_POLITICA_INTEGRACAO_TARIF IN  (182,183,184,185,186,187) ----- FILTRO DA POLITICA A SER APLICADA
+     AND 
+         SU.ID_N3_SUBCATEGORIA_SERVICO = S.ID_N3_SUBCATEGORIA_SERVICO
+     AND CS.ID_N2_CATEGORIA_SERVICO    = SU.ID_N2_CATEGORIA_SERVICO
+     AND SS.ID_N1_SEGMENTO_SERVICO     = CS.ID_N1_SEGMENTO_SERVICO
+     AND GS.ID_N4_GRUPO_SERVICO(+)     = S.ID_N4_GRUPO_SERVICO
+     AND PC.ID_PODER_CONCEDENTE        = S.ID_PODER_CONCEDENTE
+     AND GE.ID_GESTOR_SERVICO          = S.ID_GESTOR_SERVICO
+     AND ES.ID_EXECUTOR_SERVICO        = S.ID_EXECUTOR_SERVICO
+  )
+  SELECT DISTINCT G.ID_TARIFA_APLICADA
+                , A.ID_COMPORTAM_SENTIDO_VIAGEM
+                , PT.ID_POLITICA_INTEGRACAO_TARIF
+                , PT.NM_POLITICA_INTEGRACAO_TARIF
+                , PT.DT_INICIO_APLICACAO
+                , PT.DT_FINAL_APLICACAO
+                , PT.DT_INICIO_APLICACAO                    AS DT_INICIO_CONSIDERACAO_RECARGA
+                , PT.DT_FINAL_APLICACAO                     AS DT_FIM_CONSIDERACAO_RECARGA
+                , TE.ID_EMISSOR_CREDITO
+                , PRO.ID_PRODUTO_SAM                        AS ID_PRODUTO
+                --
+                , B.ID_PERCURSO_VIAGEM_ORIGEM               AS ID_PERCURSO_VIAGEM_ORIGEM
+                , DECODE(A.ID_SERVICO_INTEGRACAO_ORIGEM,
+                       S1.ID_SERVICO_INTEGRACAO,
+                       S1.ID_N3_SUBCATEGORIA_SERVICO,
+                       S2.ID_N3_SUBCATEGORIA_SERVICO)       AS ID_N3_ORIGEM
+                , DECODE(A.ID_SERVICO_INTEGRACAO_ORIGEM,
+                       S1.ID_SERVICO_INTEGRACAO,
+                       S1.ID_N4_GRUPO_SERVICO,
+                       S2.ID_N4_GRUPO_SERVICO)              AS ID_N4_ORIGEM
+                --
+                , B.ID_PERCURSO_VIAGEM                      AS ID_PERCURSO_VIAGEM_DESTINO
+                , DECODE(A.ID_SERVICO_INTEGRACAO_DESTINO,
+                       S1.ID_SERVICO_INTEGRACAO,
+                       S1.ID_N3_SUBCATEGORIA_SERVICO,
+                       S2.ID_N3_SUBCATEGORIA_SERVICO)       AS ID_N3_DESTINO
+                , DECODE(A.ID_SERVICO_INTEGRACAO_DESTINO,
+                       S1.ID_SERVICO_INTEGRACAO,
+                       S1.ID_N4_GRUPO_SERVICO,
+                       S2.ID_N4_GRUPO_SERVICO)              AS ID_N4_DESTINO
+                --
+                , DECODE(A.FG_APLICACAO_FAIXA_HORARIA,
+                       'N',
+                       'NA',
+                       (DECODE(F.HH_INICIAL_FAIXA,
+                               NULL,
+                               'NA',
+                               LPAD(F.HH_INICIAL_FAIXA, 2, 0) || ':' ||
+                               LPAD(F.MM_INICIAL_FAIXA, 2, 0))))          AS HH_INICIAL_FAIXA
+                , DECODE(A.FG_APLICACAO_FAIXA_HORARIA,
+                       'N',
+                       'NA',
+                       (DECODE(F.HH_FINAL_FAIXA,
+                               NULL,
+                               'NA',
+                               LPAD(F.HH_FINAL_FAIXA, 2, 0) || ':' ||
+                               LPAD(F.MM_FINAL_FAIXA, 2, 0))))            AS HH_FINAL_FAIXA
+                , DECODE(A.FG_APLICACAO_FAIXA_HORARIA,
+                       'S',
+                       'NA',
+                       F.DT_ESPECIFICA)                                   AS DT_ESPECIFICA
+                , DECODE(A.FG_APLICACAO_FAIXA_HORARIA,
+                       'N',
+                       'NA',
+                       (DECODE(F.DD_SEMANA, NULL, 'NA', F.DD_SEMANA)))    AS TIPO_DIA
+                , NVL(A.QT_MIN_ULT_RECARGA, 0) * TA.VL_TARIFA             AS QT_MIN_ULT_RECARGA
+                , DECODE(A.TP_APLICAR_EM_CARTAO, 'N', 0, 1)               AS TP_APLICAR_EM_CARTAO
+                , A.QT_LIMITE_USO_DIARIO
+                , NVL(A.MM_INTEGRACAO_VIAGEM, 0)                          AS MM_INTEGRACAO_VIAGEM
+                , DECODE(A.FG_INTEGRA_PROPRIO_SERVICO, 'N', 0, 1)         AS FG_INTEGRA_PROPRIO_SERVICO
+                , DECODE(A.FG_INTEGRA_PROPRIO_SERV_OPOSTO, 'N', 0, 1)     AS FG_INTEGRA_PROPRIO_SERV_OPOSTO
+                , TRUNC(TA.VL_TARIFA,2)
+                , NVL(A.VL_TARIFA, 0)                                     AS VL_TARIFA
+                , NVL(A.QT_TOKEN_DEB, 0)                                  AS QT_TOKEN_DEB
+                , G5.ID_PONTO_COLETA
+                --     
+                /*
+                , A.ID_COMPORTAM_SENTIDO_VIAGEM
+                , PT.ID_MOTIVO_SITUACAO
+                */
+  FROM   SERVICO                        S1
+       , SERVICO                        S2
+       , TCFG_COMPORTAM_SENTIDO_VIAGEM   A
+       , TCFG_COMPORT_SENT_VIAGEM_FAIXA  F
+       , TCFG_POLITICA_INTEGRACAO_TARIF PT
+       , TCFG_TIPO_EMISSAO_CREDITO      TE
+       , TCFG_PERFIL_PRODUTO            PP
+       , TCFG_CREDITO_ELETRONICO        CE
+       , TCFG_PERCURSO_VIAGEM            B --- DESTINO
+       , TCFG_TARIFA                    TA
+       , TCFG_N4_GRUPO_SERVICO          G4
+       , TCFG_N5_SERVICO                G5    
+       , TCFG_TARIFA_APLICADA            G --- PRECISA CORRIGIR O CADASTRAMENTO
+       , TCAD_PRODUTO                   PRO
+       --
+ WHERE (   ( A.ID_POLITICA_INT_TARIF_ORIGEM  = S1.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_ORIGEM  = S1.ID_SERVICO_INTEGRACAO        AND
+             A.ID_POLITICA_INT_TARIF_DESTINO = S2.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_DESTINO = S2.ID_SERVICO_INTEGRACAO
+           ) 
+        OR
+           ( A.ID_POLITICA_INT_TARIF_ORIGEM  = S2.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_ORIGEM  = S2.ID_SERVICO_INTEGRACAO        AND
+             A.ID_POLITICA_INT_TARIF_DESTINO = S1.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_DESTINO = S1.ID_SERVICO_INTEGRACAO
+           ) 
+        OR
+           ( A.ID_POLITICA_INT_TARIF_ORIGEM  = S1.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_ORIGEM  = S1.ID_SERVICO_INTEGRACAO        AND
+             A.ID_POLITICA_INT_TARIF_DESTINO = S1.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_DESTINO = S1.ID_SERVICO_INTEGRACAO
+           ) 
+        OR
+           ( A.ID_POLITICA_INT_TARIF_ORIGEM  = S2.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_ORIGEM  = S2.ID_SERVICO_INTEGRACAO        AND
+             A.ID_POLITICA_INT_TARIF_DESTINO = S2.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_DESTINO = S2.ID_SERVICO_INTEGRACAO
+           )
+       )
+   AND A.FG_EXCLUIDO                            = 'N'
+  -- AND F.ID_COMPORTAM_SENTIDO_VIAGEM(+)         = A.ID_COMPORTAM_SENTIDO_VIAGEM --- NÃO ESTÁ INCLUINDO QUANDO NÃO TEM COMPORTAMENTO DIFERENCIADO
+   AND F.ID_COMPORTAM_SENTIDO_VIAGEM            = A.ID_COMPORTAM_SENTIDO_VIAGEM    
+   AND PT.ID_POLITICA_INTEGRACAO_TARIF          = A.ID_POLITICA_INT_TARIF_ORIGEM
+   AND PP.ID_PRODUTO                            = A.ID_PRODUTO
+   AND TE.ID_TIPO_EMISSAO_CREDITO(+)            = PP.ID_TIPO_EMISSAO_CREDITO
+   AND CE.ID_CREDITO_ELETRONICO(+)              = TE.ID_CREDITO_ELETRONICO
+   AND PT.FG_EXCLUIDO                           = 'N'
+   AND A.FG_EXCLUIDO                            = 'N'
+   AND PP.FG_EXCLUIDO                           = 'N'
+   AND PP.ID_PERFIL_PRODUTO                     IS NOT NULL
+   AND (PT.DT_FINAL_APLICACAO                   IS NULL OR PT.DT_FINAL_APLICACAO > SYSDATE)
+   AND (SYSDATE BETWEEN PP.DT_INICIO_VIGENCIA AND NVL(PP.DT_FIM_VIGENCIA, SYSDATE + 1))
+   AND B.ID_PERCURSO_VIAGEM_ORIGEM = A.ID_PERCURSO_VIAGEM_ORIGEM --- DESTINO
+   AND ( ( ( A.ID_POLITICA_INT_TARIF_DESTINO    = S2.ID_POLITICA_INTEGRACAO_TARIF AND
+             A.ID_SERVICO_INTEGRACAO_DESTINO    = S2.ID_SERVICO_INTEGRACAO
+           ) 
+          AND
+          B.ID_N2_CATEGORIA_SERVICO_DESTIN      = S2.ID_N2_CATEGORIA_SERVICO) 
+       OR
+         ( ( A.ID_POLITICA_INT_TARIF_DESTINO    = S1.ID_POLITICA_INTEGRACAO_TARIF 
+             AND
+             A.ID_SERVICO_INTEGRACAO_DESTINO    = S1.ID_SERVICO_INTEGRACAO 
+           ) 
+          AND
+          B.ID_N2_CATEGORIA_SERVICO_DESTIN      = S1.ID_N2_CATEGORIA_SERVICO
+         )
+       )
+   AND PRO.ID_PRODUTO                           = A.ID_PRODUTO       
+   AND TA.ID_TARIFA = PT.ID_TARIFA
+   AND G4.ID_N3_SUBCATEGORIA_SERVICO            = DECODE(A.ID_SERVICO_INTEGRACAO_DESTINO,
+                                                         S1.ID_SERVICO_INTEGRACAO,
+                                                         S1.ID_N3_SUBCATEGORIA_SERVICO ,
+                                                         S2.ID_N3_SUBCATEGORIA_SERVICO)
+   AND (DECODE(A.ID_SERVICO_INTEGRACAO_DESTINO,
+               S1.ID_SERVICO_INTEGRACAO,
+               S1.ID_N4_GRUPO_SERVICO,
+               S2.ID_N4_GRUPO_SERVICO) IS NULL 
+        OR
+          (DECODE(A.ID_SERVICO_INTEGRACAO_DESTINO,
+                   S1.ID_SERVICO_INTEGRACAO,
+                   S1.ID_N4_GRUPO_SERVICO,
+                   S2.ID_N4_GRUPO_SERVICO) IS NOT NULL 
+           AND
+               
+       G4.ID_N4_GRUPO_SERVICO                    = DECODE(A.ID_SERVICO_INTEGRACAO_DESTINO,
+                                                          S1.ID_SERVICO_INTEGRACAO,
+                                                          S1.ID_N4_GRUPO_SERVICO,
+                                                          S2.ID_N4_GRUPO_SERVICO)
+           )
+       )
+   AND G5.ID_N4_GRUPO_SERVICO                    = G4.ID_N4_GRUPO_SERVICO
+--   AND (P_ID_SUBCATEGORIA_SERVICO IS NULL OR G3.ID_N3_SUBCATEGORIA_SERVICO = P_ID_SUBCATEGORIA_SERVICO)   
+   AND G5.ID_PONTO_COLETA                        = 188   
+--   AND (V_SITUACAO IS NULL OR PT.ID_MOTIVO_SITUACAO = V_SITUACAO)   
+--   AND G.ID_COMPORTAM_SENTIDO_VIAGEM(+)          = F.ID_COMPORTAM_SENTIDO_VIAGEM
+--   AND G.ID_COMPORT_SENT_VIAGEM_FAIXA(+)         = F.ID_COMPORT_SENT_VIAGEM_FAIXA;
+   AND G.ID_COMPORTAM_SENTIDO_VIAGEM          = F.ID_COMPORTAM_SENTIDO_VIAGEM
+   AND G.ID_COMPORT_SENT_VIAGEM_FAIXA         = F.ID_COMPORT_SENT_VIAGEM_FAIXA;   
+   

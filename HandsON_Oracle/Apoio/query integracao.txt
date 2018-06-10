@@ -1,0 +1,92 @@
+select DISTINCT
+       G.ID_TARIFA_APLICADA
+     , PT.ID_POLITICA_INTEGRACAO_TARIF
+     , PT.NM_POLITICA_INTEGRACAO_TARIF
+     , PT.DT_INICIO_APLICACAO
+     , PT.DT_FINAL_APLICACAO
+     , PT.DT_INICIO_APLICACAO AS DT_INICIO_CONSIDERACAO_RECARGA
+     , PT.DT_FINAL_APLICACAO AS DT_FIM_CONSIDERACAO_RECARGA
+     , TE.ID_EMISSOR_CREDITO
+     , A.ID_PRODUTO
+     , c.id_percurso_viagem AS ID_PERCURSO_VIAGEM_ORIGEM
+     , D.ID_N3_SUBCATEGORIA_SERVICO
+     , D.ID_N4_GRUPO_SERVICO     
+     , DECODE(A.FG_APLICACAO_FAIXA_HORARIA, 'N', 'NA', (DECODE(F.HH_INICIAL_FAIXA, null, 'NA', lpad(F.HH_INICIAL_FAIXA, 2, 0) || ':' || lpad(F.MM_INICIAL_FAIXA, 2, 0))))AS HH_INICIAL_FAIXA
+     , DECODE(A.FG_APLICACAO_FAIXA_HORARIA, 'N', 'NA', (DECODE(F.HH_FINAL_FAIXA, null, 'NA', lpad(F.HH_FINAL_FAIXA, 2, 0) || ':' || lpad(F.MM_FINAL_FAIXA, 2, 0))))AS HH_FINAL_FAIXA
+     , DECODE(A.FG_APLICACAO_FAIXA_HORARIA, 'S', 'NA',F.DT_ESPECIFICA)AS DT_ESPECIFICA
+     , DECODE(A.FG_APLICACAO_FAIXA_HORARIA, 'N', 'NA', (DECODE(F.DD_SEMANA, null, 'NA', F.DD_SEMANA)))AS TIPO_DIA 
+     , NVL(A.QT_MIN_ULT_RECARGA, 0)  AS QT_MIN_ULT_RECARGA
+     --DECODE(CO.QT_MIN_ULT_RECARGA, null, 0, CO.QT_MIN_ULT_RECARGA) * 100 + c_SOMADOR_MOEDA AS QT_MIN_ULT_RECARGA,
+     , DECODE(A.TP_APLICAR_EM_CARTAO, 'N', 0, 1) AS TP_APLICAR_EM_CARTAO
+     , A.QT_LIMITE_USO_DIARIO
+     , NVL(A.MM_INTEGRACAO_VIAGEM, 0) AS MM_INTEGRACAO_VIAGEM
+     , DECODE(A.FG_INTEGRA_PROPRIO_SERVICO, 'N', 0, 1) AS FG_INTEGRA_PROPRIO_SERVICO
+     , DECODE(A.FG_INTEGRA_PROPRIO_SERV_OPOSTO, 'N', 0, 1) AS FG_INTEGRA_PROPRIO_SERV_OPOSTO
+     , TA.VL_TARIFA
+     , b.id_percurso_viagem AS ID_PERCURSO_VIAGEM_DESTINO     
+     , NVL(A.VL_TARIFA, 0) AS VL_TARIFA     
+     -- DECODE(CO.VL_TARIFA, null, 0, CO.VL_TARIFA) * 100 + c_SOMADOR_MOEDA AS VL_TARIFA,
+     , NVL(A.QT_TOKEN_DEB, 0) AS QT_TOKEN_DEB,
+     --DECODE(CO.QT_TOKEN_DEB, null, 0, CO.QT_TOKEN_DEB) * 100 + c_SOMADOR_MOEDA AS QT_TOKEN_DEB
+     G5.ID_PONTO_COLETA     
+     --     
+     /*
+     , a.id_comportam_sentido_viagem
+     , b.id_percurso_viagem AS ID_PERCURSO_VIAGEM_DESTINO
+     , c.id_percurso_viagem AS ID_PERCURSO_VIAGEM_ORIGEM
+     , d.id_politica_integracao_tarif
+     , d.id_servico_integracao
+     , e.id_politica_integracao_tarif
+     , e.id_servico_integracao
+     , f.id_comport_sent_viagem_faixa
+     , g.id_tarifa_aplicada
+     */
+from tcfg_comportam_sentido_viagem   a
+   , tcfg_percurso_viagem            b 
+   , tcfg_percurso_viagem            c 
+   , tcfg_servico_integracao         d
+   , tcfg_servico_integracao         e
+   , tcfg_comport_sent_viagem_faixa  f
+   , tcfg_tarifa_aplicada            g
+   , TCFG_POLITICA_INTEGRACAO_TARIF  PT     
+   , TCFG_PERFIL_PRODUTO             PP
+   , TCFG_TIPO_EMISSAO_CREDITO       TE
+   , TCFG_CREDITO_ELETRONICO         CE  
+   , TCFG_N3_SUBCATEGORIA_SERVICO    G3           
+   , TCFG_N4_GRUPO_SERVICO           G4
+   , TCFG_N5_SERVICO                 G5   
+   , TCFG_TARIFA                     TA     
+   , VCFG_SITUACAO_REGISTRO          VSR   
+where 
+           G.FG_EXCLUIDO                     = 'N'
+     AND   PT.FG_EXCLUIDO                    = 'N'
+     AND   A.FG_EXCLUIDO                     = 'N'
+     AND   PP.FG_EXCLUIDO                    = 'N'
+     AND   PP.ID_PERFIL_PRODUTO              IS NOT NULL
+     AND   (PT.DT_FINAL_APLICACAO            IS NULL OR PT.DT_FINAL_APLICACAO > sysdate)
+     AND   SYSDATE                           BETWEEN PP.DT_INICIO_VIGENCIA AND NVL(PP.DT_FIM_VIGENCIA, sysdate +1)
+     AND   b.id_percurso_viagem              = a.id_percurso_viagem_origem
+     and   c.id_percurso_viagem (+)          = b.id_percurso_viagem_origem
+     and   d.id_politica_integracao_tarif    = a.id_politica_int_tarif_origem
+     and   d.id_servico_integracao           = a.id_servico_integracao_origem
+     and   e.id_politica_integracao_tarif    = a.id_politica_int_tarif_destino
+     and   e.id_servico_integracao           = a.id_servico_integracao_destino
+     and   f.id_comportam_sentido_viagem     = a.id_comportam_sentido_viagem
+     and   g.id_comportam_sentido_viagem     = f.id_comportam_sentido_viagem
+     and   g.id_comport_sent_viagem_faixa    = f.id_comport_sent_viagem_faixa
+     AND   PT.ID_POLITICA_INTEGRACAO_TARIF   = A.ID_POLITICA_INT_TARIF_ORIGEM
+     AND   PP.ID_PRODUTO (+)                 = A.ID_PRODUTO
+     AND   TE.ID_TIPO_EMISSAO_CREDITO (+)    = PP.ID_TIPO_EMISSAO_CREDITO
+     AND   CE.ID_CREDITO_ELETRONICO   (+)    = TE.ID_CREDITO_ELETRONICO
+     AND   G3.ID_N3_SUBCATEGORIA_SERVICO     = D.ID_N3_SUBCATEGORIA_SERVICO           
+     AND   G4.ID_N4_GRUPO_SERVICO        (+) = D.ID_N4_GRUPO_SERVICO
+     AND   G4.ID_N3_SUBCATEGORIA_SERVICO (+) = D.ID_N3_SUBCATEGORIA_SERVICO
+     AND   G5.ID_N4_GRUPO_SERVICO            = G4.ID_N4_GRUPO_SERVICO    
+     AND   TA.ID_TARIFA                      = PT.ID_TARIFA
+     AND   VSR.ID_MOTIVO_SITUACAO            = PT.ID_MOTIVO_SITUACAO
+--   AND (p_id_subcategoria_servico is null OR G3.ID_N3_SUBCATEGORIA_SERVICO = p_id_subcategoria_servico)
+--     AND G5.ID_PONTO_COLETA = 188
+--   AND (v_situacao is null OR PT.ID_MOTIVO_SITUACAO = v_situacao)
+--     AND a.id_comportam_sentido_viagem       = 495
+     ORDER BY G5.ID_PONTO_COLETA, PT.ID_POLITICA_INTEGRACAO_TARIF, TE.ID_EMISSOR_CREDITO, A.ID_PRODUTO;     
+

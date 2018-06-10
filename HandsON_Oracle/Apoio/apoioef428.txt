@@ -1,0 +1,106 @@
+  -- UC428.01 – Processar Arquivo de Log
+  -- 4.1.6 Fluxo Básico – Processar Arquivo de Log         
+  -- 
+  -- 4.1.7 Fluxos Alternativos - FA428.01.01 Processar Abertura do Serviço
+  -- 4.1.7 Fluxos Alternativos - FA428.01.02 Processar Fechamento do Serviço
+  -- 4.1.7 Fluxos Alternativos - FA428.01.03 Processar Recarga
+  -- 4.1.7 Fluxos Alternativos - FA428.01.04 Atualizar Item do Pedido de Crédito (Loja Virtual)
+  -- 4.1.7 Fluxos Alternativos - FA428.01.05 Processar Utilização (Produto Comum Monetário)
+  -- 4.1.7 Fluxos Alternativos - FA428.01.06 Processar Lista Vermelha (Bloqueio / Desbloqueio / Cancelamento) - Produto "Comum Monetário"
+  -- 4.1.7 Fluxos Alternativos - FA428.01.07 Processar Inversão de Viagem         
+  -- 
+  -- 4.1.8 Fluxos de Exceção - FE428.01.01 Não existe Arquivo de Log para processamento
+  -- 4.1.8 Fluxos de Exceção - FE428.01.02 Arquivo de Log corrompido
+  -- 4.1.8 Fluxos de Exceção - FE428.01.03 Tamanho do Arquivo incorreto (Arquivo vazio)
+  -- 4.1.8 Fluxos de Exceção - FE428.01.04 Assinatura do Arquivo inválida
+  -- 4.1.8 Fluxos de Exceção - FE428.01.05 Arquivo já processado
+  -- 4.1.8 Fluxos de Exceção - FE428.01.06 Ponto de Coleta inexistente
+  -- 4.1.8 Fluxos de Exceção - FE428.01.07 Erro na decodificação do arquivo binário
+  -- 4.1.8 Fluxos de Exceção - FE428.01.08 Abertura do Serviço já processada
+  -- 4.1.8 Fluxos de Exceção - FE428.01.09 Assinatura do Registro inválida
+  -- 4.1.8 Fluxos de Exceção - FE428.01.10 Cartão inexistente
+  -- 4.1.8 Fluxos de Exceção - FE428.01.11 NSU da Recarga Inexistente
+  -- 4.1.8 Fluxos de Exceção - FE428.01.12 Validação da Situação da Recarga
+  -- 4.1.8 Fluxos de Exceção - FE428.01.13 Data/Hora/Minuto da Baixa da Recarga inválida
+  -- 4.1.8 Fluxos de Exceção - FE428.01.14 Hora/Minuto da Baixa da Recarga menor que a Hora/Minuto da Abertura do Serviço
+  -- 4.1.8 Fluxos de Exceção - FE428.01.15 Sequencial de Viagem do SAM inválido
+  -- 4.1.8 Fluxos de Exceção - FE428.01.16 Número Sequencial de Transação do Validador inválido
+  -- 4.1.8 Fluxos de Exceção - FE428.01.17 Número Sequencial de Transação do Produto já processado
+  -- 4.1.8 Fluxos de Exceção - FE428.01.18 Valor da Recarga incorreto
+  -- 4.1.8 Fluxos de Exceção - FE428.01.19 Data de Abertura do Serviço maior que a Data Atual
+  -- 4.1.8 Fluxos de Exceção - FE428.01.20 Data/Hora/Minuto do Fechamento do Serviço inválida
+  -- 4.1.8 Fluxos de Exceção - FE428.01.21 Número Sequencial de Viagem do SAM é diferente da Abertura do Serviço
+  -- 4.1.8 Fluxos de Exceção - FE428.01.22 Número Sequencial da Transação do Validador já processado
+  -- 4.1.8 Fluxos de Exceção - FE428.01.23 Valor Debitado não confere com Valor da Tarifa
+  -- 4.1.8 Fluxos de Exceção - FE428.01.24 Saldo do Produto não confere
+  -- 4.1.8 Fluxos de Exceção - FE428.01.25 Data/Hora/Minuto da Utilização inválida
+  -- 4.1.8 Fluxos de Exceção - FE428.01.26 Hora/Minuto da Utilização menor que a Hora/Minuto da Abertura do Serviço
+  -- 4.1.8 Fluxos de Exceção - FE428.01.27 Arquivo de Log não possui Abertura do Serviço
+  -- 4.1.8 Fluxos de Exceção - FE428.01.28 Não existe Fechamento para a Abertura do Serviço
+  -- 4.1.8 Fluxos de Exceção - FE428.01.29 Data/Hora/Minuto da Geração do Arquivo é inválida
+  -- 4.1.8 Fluxos de Exceção - FE428.01.30 Data/Hora/Minuto do Ponto de Inversão da Viagem inválida
+  -- 4.1.8 Fluxos de Exceção - FE428.01.31 Número Sequencial de Viagem do SAM é diferente da Abertura do Serviço
+  
+  -- 4.2 UC428.02 – Pesquisar Crítica de Processamento do Log
+  -- 4.2.6 Fluxo Básico – Pesquisar Crítica de Processamento do Log
+  -- 
+  -- 4.2.7 Fluxos Alternativos - FA428.02.01 Consultar Crítica do Registro
+  -- 4.2.7 Fluxos Alternativos - FA428.02.02 Analisar Crítica
+  -- 4.2.7 Fluxos Alternativos - FA428.02.03 Aprovar Crítica (Reprocessar Registro)
+  -- 4.2.7 Fluxos Alternativos - FA428.02.04 Reprovar Crítica (Descartar Registro)
+  -- 
+  -- 4.2.8 Fluxos de Exceção - FE428.02.01 Não existe Crítica do Processamento do Arquivo de Log
+     
+  -- 4.3 UC428.03 – Pesquisar Registros de Log Processados
+  -- 4.3.6 Fluxo Básico – Listar Registros de Utilização Processados e pendentes de Fechamento da Receita de Utilização
+  --
+  -- 4.3.7 Fluxos Alternativos - FA428.03.01 Listar Dados da Recarga Baixada (Decomposição da Receita de Venda)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.02 Listar Utilização e Recarga do Cartão do Cidadão (Extrato Por Produto - Portal SBE)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.03 Listar Utilização e Recarga do Cartão do Cidadão (Extrato Geral - Portal SBE)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.04 Listar Saldo do Produto (Saldo – Portal SBE)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.05 Listar Registros de Utilização com Fechamento Realizado pela Receita de Utilização realizado conforme Sequencial de Fechamento da Receita de Utilização e Identificador(es) do(s) Serviço(s)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.06 Listar Registros de Utilização conforme Fechamento Realizado pela Receita de Utilização conforme Período e Identificador(es) do(s) Serviço(s)    
+  -- 4.3.7 Fluxos Alternativos - FA428.03.07 Listar Quantidade de Passageiros por Tipo de Crédito (Diário)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.08 Listar Quantidade de Passageiros por Produto e Tipo de Crédito (Diário)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.09 Consultar Data da Primeira Utilização conforme NSU da Recarga
+  -- 4.3.7 Fluxos Alternativos - FA428.03.10 Listar Quantidade de Passageiros por Tipo de Crédito (Mensal)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.11 Listar Quantidade de Passageiros por Produto e Tipo de Crédito (Mensal)
+  -- 4.3.7 Fluxos Alternativos - FA428.03.12 Listar Quantidade de Início de Cota para Produtos Temporais (Diário)    
+  -- 4.3.7 Fluxos Alternativos - FA428.03.13 Consultar Saldo da Recarga conforme Data/Hora informada
+  -- 4.3.7 Fluxos Alternativos - FA428.03.14 Consultar data mais recente de Utilização ou Recarga do Cartão
+  -- 
+  -- 4.3.8 Fluxos de Exceção - FE428.03.01 Não existe registro de log processado
+  -- 4.3.8 Fluxos de Exceção - FE428.03.02 Não existe registro de Utilização com Fechamento Realizado (Receita de Utilização)    
+  -- 4.3.8 Fluxos de Exceção - FE428.03.03 Não existe Registro de Utilização para o NSU da Recarga ou Até Data/Hora informada
+      
+  -- 4.4 UC428.04 – Processar Registros de Log (Online)    
+  -- 4.4.6 Fluxo Básico – Processar Registro de Log (Online)
+  -- 
+  -- 4.4.7 Fluxos Alternativos - FA428.04.01 Processar Abertura do Serviço
+  -- 4.4.7 Fluxos Alternativos - FA428.04.02 Processar Fechamento do Serviço
+  -- 4.4.7 Fluxos Alternativos - FA428.04.03 Processar Recarga
+  -- 4.4.7 Fluxos Alternativos - FA428.04.04 Atualizar Item do Pedido de Crédito (Loja Virtual)
+  -- 4.4.7 Fluxos Alternativos - FA428.04.05 Processar Lista Vermelha (Bloqueio / Desbloqueio / Cancelamento) - Produto Comum Monetário
+  -- 
+  -- 4.4.8 Fluxos de Exceção - FE428.04.01 Abertura do Serviço já processada
+  -- 4.4.8 Fluxos de Exceção - FE428.04.02 Assinatura do Registro inválida
+  -- 4.4.8 Fluxos de Exceção - FE428.04.03 Cartão inexistente
+  -- 4.4.8 Fluxos de Exceção - FE428.04.04 NSU da Recarga Inexistente
+  -- 4.4.8 Fluxos de Exceção - FE428.04.05 Validação da Situação da Recarga
+  -- 4.4.8 Fluxos de Exceção - FE428.04.06 Data/Hora/Minuto da Baixa da Recarga inválida
+  -- 4.4.8 Fluxos de Exceção - FE428.04.07 Hora/Minuto da Baixa da Recarga menor que a Hora/Minuto da Abertura do Serviço
+  -- 4.4.8 Fluxos de Exceção - FE428.04.08 Sequencial de Viagem do SAM inválido
+  -- 4.4.8 Fluxos de Exceção - FE428.04.09 Número Sequencial de Transação do Equipamento/Leitor inválido
+  -- 4.4.8 Fluxos de Exceção - FE428.04.10 Número Sequencial de Transação do Produto já processado
+  -- 4.4.8 Fluxos de Exceção - FE428.04.11 Valor da Recarga incorreto
+  -- 4.4.8 Fluxos de Exceção - FE428.04.12 Data de Abertura do Serviço maior que a Data Atual
+  -- 4.4.8 Fluxos de Exceção - FE428.04.13 Data/Hora/Minuto do Fechamento do Serviço inválida
+  -- 4.4.8 Fluxos de Exceção - FE428.04.14 Número Sequencial de Viagem do SAM é diferente da Abertura do Serviço
+  -- 4.4.8 Fluxos de Exceção - FE428.04.15 Número Sequencial da Transação do Equipamento/Leitor já processado
+  -- 4.4.8 Fluxos de Exceção - FE428.04.16 Não existe Abertura do Serviço
+  -- 4.4.8 Fluxos de Exceção - FE428.04.17 Não existe Fechamento para a Abertura do Serviço
+          
+          
+
+         
+         

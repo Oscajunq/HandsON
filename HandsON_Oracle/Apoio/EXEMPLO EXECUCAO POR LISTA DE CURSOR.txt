@@ -1,0 +1,229 @@
+COM TYPE DECLARADO DENTRO DA PACKAGE, TESTAR CONFORME ABAIXO
+declare
+  -- Non-scalar parameters require additional processing 
+  p_horario_atendimento ksbe_posto_atendimento.lista_posto_atend_hor_type;
+begin
+   p_horario_atendimento(1).CD_DIA_SEMANA :=1;
+   p_horario_atendimento(1).HH_INICIAL_FUNCIONAMENTO :=TO_TIMESTAMP ('19-06-02 08:00:00.000000', 'DD-MM-RR HH24:MI:SS.FF');
+   p_horario_atendimento(1).HH_FINAL_FUNCIONAMENTO   :=TO_TIMESTAMP ('19-06-02 17:00:00.000000', 'DD-MM-RR HH24:MI:SS.FF');
+  -- Call the procedure
+  ksbe_posto_atendimento.manter_posto_atendimento(p_cd_posto_atendimento => :p_cd_posto_atendimento,
+                                                  p_nm_posto_atendimento => :p_nm_posto_atendimento,
+                                                  p_id_regiao => :p_id_regiao,
+                                                  p_cep => :p_cep,
+                                                  p_nm_logradouro => :p_nm_logradouro,
+                                                  p_nr_logradouro => :p_nr_logradouro,
+                                                  p_complemento => :p_complemento,
+                                                  p_bairro => :p_bairro,
+                                                  p_uf => :p_uf,
+                                                  p_id_cidade => :p_id_cidade,
+                                                  p_qtde_vaga_online => :p_qtde_vaga_online,
+                                                  p_referencia => :p_referencia,
+                                                  p_infor_hor_atend => :p_infor_hor_atend,
+                                                  p_horario_atendimento => p_horario_atendimento,
+                                                  p_nm_usuario => :p_nm_usuario,
+                                                  p_msg_sistemica => :p_msg_sistemica);
+end;
+
+
+
+COM TYPE DECLARADO FORA DA PACKAGE, FAZER O TESTE ABAIXO:
+
+declare
+  -- Non-scalar parameters require additional processing 
+  p_horario_atendimento lista_posto_atend_hor_type;
+begin
+  -- Call the procedure
+  P_HORARIO_ATENDIMENTO := SBE.LISTA_POSTO_ATEND_HOR_TYPE(sbe.POSTO_ATEND_HOR_TYPE(1, TO_TIMESTAMP ('19-06-02 08:00:00.000000', 'DD-MM-RR HH24:MI:SS.FF'), TO_TIMESTAMP ('19-06-02 17:00:00.000000', 'DD-MM-RR HH24:MI:SS.FF')),
+                                                          sbe.POSTO_ATEND_HOR_TYPE(2, TO_TIMESTAMP ('20-06-02 08:00:00.000000', 'DD-MM-RR HH24:MI:SS.FF'), TO_TIMESTAMP ('20-06-02 17:00:00.000000', 'DD-MM-RR HH24:MI:SS.FF')));
+  --
+  ksbe_posto_atendimento.manter_posto_atendimento(p_id_posto_atendimento => :p_id_posto_atendimento,
+                                                  p_cd_posto_atendimento => :p_cd_posto_atendimento,
+                                                  p_nm_posto_atendimento => :p_nm_posto_atendimento,
+                                                  p_id_regiao => :p_id_regiao,
+                                                  p_cep => :p_cep,
+                                                  p_nm_logradouro => :p_nm_logradouro,
+                                                  p_nr_logradouro => :p_nr_logradouro,
+                                                  p_complemento => :p_complemento,
+                                                  p_bairro => :p_bairro,
+                                                  p_uf => :p_uf,
+                                                  p_id_cidade => :p_id_cidade,
+                                                  p_qtde_vaga_online => :p_qtde_vaga_online,
+                                                  p_referencia => :p_referencia,
+                                                  p_infor_hor_atend => :p_infor_hor_atend,
+                                                  p_horario_atendimento => p_horario_atendimento,
+                                                  p_nm_usuario => :p_nm_usuario,
+                                                  p_msg_sistemica => :p_msg_sistemica);
+end;
+
+
+
+
+declare
+  -- Non-scalar parameters require additional processing 
+  p_fotos_usuarios lista_fotos_usuarios_type;
+begin
+  -- Call the procedure
+  p_fotos_usuarios := SBE.LISTA_FOTOS_USUARIOS_TYPE( sbe.FOTOS_USUARIOS_TYPE(1,550770,'EF024',2592),
+                                                     sbe.FOTOS_USUARIOS_TYPE(1,550771,'EF024',2592),
+                                                     sbe.FOTOS_USUARIOS_TYPE(1,550772,'EF024',2592),
+                                                     sbe.FOTOS_USUARIOS_TYPE(1,550780,'EF024',2592));
+  --
+  ksbe_documento_usuario.atualizar_sit_documento(p_fotos_usuarios => p_fotos_usuarios,
+                                                 p_msg_sistemica => :p_msg_sistemica);
+end;
+
+
+
+DECLARE
+    p_vigencia_emissor      LISTA_VIGENCIA_EMISSOR_TYPE;
+    p_responsavel_emissor   LISTA_RESP_EMISSOR_TYPE;
+    p_contato_emissor       LISTA_CONTATO_EMISSOR_TYPE;
+    p_responsavel_sptrans   LISTA_RESP_SPTRANS_TYPE;
+	
+	P_ID_EMISSOR_CREDITO  NUMBER    := NULL;
+	P_ID_ENDERECO_EMPRESA NUMBER    := NULL;
+	P_MSG_SISTEMA         CHAR(200) := NULL;
+BEGIN
+  p_vigencia_emissor    := sbe.LISTA_VIGENCIA_EMISSOR_TYPE(sbe.VIGENCIA_EMISSOR_TYPE(NULL, NULL, 101547, TO_DATE('20170726','YYYYMMDD'), TO_DATE('20170926','YYYYMMDD')));
+
+  p_responsavel_emissor := sbe.LISTA_RESP_EMISSOR_TYPE(RESP_EMISSOR_TYPE(NULL, NULL, 'José Couto', 19066597402, 'jcouto@sptrans.com.br', NULL, 11, 96659874));
+	
+  p_contato_emissor     := sbe.LISTA_CONTATO_EMISSOR_TYPE(CONTATO_EMISSOR_TYPE(NULL, NULL, NULL, NULL, NULL, NULL, 71, 956210598, NULL));
+	
+  p_responsavel_sptrans := sbe.LISTA_RESP_SPTRANS_TYPE(RESP_SPTRANS_TYPE(NULL, 17, 2, 1));
+
+  sbe.ksbe_emissor_credito.manter_emissor_credito(
+	                                            p_id_emissor_credito  => P_ID_EMISSOR_CREDITO,
+                                              p_id_tipo_endereco    => 2,
+                                              p_id_endereco_empresa => P_ID_ENDERECO_EMPRESA,
+                                              p_de_razao_social     => 'Empresa teste Dev Plsqls',
+                                              p_nm_fantasia         => 'Empresa Plsqls',
+                                              p_cnpj                => 012300800000182,
+                                              p_id_cidade           => 9668,
+                                              p_cd_uf               => 'SP',
+                                              p_nr_cep              => 431110,
+                                              p_nm_logradouro       => 'Logradouro da empresa Plsqls',
+                                              p_nr_logradouro       => 73,
+                                              p_de_complemento      => 'Complemento Testes',
+                                              p_nm_bairro           => 'Jardim Testes',
+                                              p_vigencia_emissor    => p_vigencia_emissor,
+                                              p_responsavel_emissor => p_responsavel_emissor,
+                                              p_contato_emissor     => p_contato_emissor,
+                                              p_responsavel_sptrans => p_responsavel_sptrans,
+                                              p_nm_usuario          => 'MIBA',
+                                              p_msg_sistema         => P_MSG_SISTEMA);
+
+ DBMS_OUTPUT.PUT_LINE('P_MSG_SISTEMA = ' || P_MSG_SISTEMA);
+ DBMS_OUTPUT.PUT_LINE('P_ID_EMISSOR_CREDITO = ' || P_ID_EMISSOR_CREDITO);
+ DBMS_OUTPUT.PUT_LINE('P_ID_ENDERECO_EMPRESA = ' || P_ID_ENDERECO_EMPRESA);  
+END;
+
+
+declare
+  p_vigencia_emissor lista_vigencia_emissor_type;
+  p_responsavel_emissor lista_resp_emissor_type;
+  p_contato_emissor lista_contato_emissor_type;
+  p_responsavel_sptrans lista_resp_sptrans_type;
+begin
+  -- Call the procedure
+  p_vigencia_emissor    := sbe.LISTA_VIGENCIA_EMISSOR_TYPE(sbe.VIGENCIA_EMISSOR_TYPE(NULL, NULL, 101547, TO_DATE('20170726','YYYYMMDD'), TO_DATE('20170926','YYYYMMDD')));
+
+  p_responsavel_emissor := sbe.LISTA_RESP_EMISSOR_TYPE(RESP_EMISSOR_TYPE(NULL, NULL, 'José Couto', 19066597402, 'jcouto@sptrans.com.br', NULL, 11, 96659874));
+	
+	p_contato_emissor     := sbe.LISTA_CONTATO_EMISSOR_TYPE(CONTATO_EMISSOR_TYPE(NULL, NULL, NULL, NULL, NULL, NULL, 71, 956210598, NULL));
+	
+	p_responsavel_sptrans := sbe.LISTA_RESP_SPTRANS_TYPE(RESP_SPTRANS_TYPE(NULL, 17, 2, 1));
+    
+  ksbe_emissor_credito.manter_emissor_credito(p_id_emissor_credito => :p_id_emissor_credito,
+                                              p_id_tipo_endereco => :p_id_tipo_endereco,
+                                              p_id_endereco_empresa => :p_id_endereco_empresa,
+                                              p_de_razao_social => :p_de_razao_social,
+                                              p_nm_fantasia => :p_nm_fantasia,
+                                              p_cnpj => :p_cnpj,
+                                              p_id_cidade => :p_id_cidade,
+                                              p_cd_uf => :p_cd_uf,
+                                              p_nr_cep => :p_nr_cep,
+                                              p_nm_logradouro => :p_nm_logradouro,
+                                              p_nr_logradouro => :p_nr_logradouro,
+                                              p_de_complemento => :p_de_complemento,
+                                              p_nm_bairro => :p_nm_bairro,
+                                              p_vigencia_emissor => p_vigencia_emissor,
+                                              p_responsavel_emissor => p_responsavel_emissor,
+                                              p_contato_emissor => p_contato_emissor,
+                                              p_responsavel_sptrans => p_responsavel_sptrans,
+                                              p_nm_usuario => :p_nm_usuario,
+                                              p_msg_sistema => :p_msg_sistema);
+end;
+
+
+
+declare
+  p_forma_atend_venda lista_forma_atend_venda_type;  
+begin
+  -- Call the procedure
+  
+  p_forma_atend_venda := SBE.LISTA_FORMA_ATEND_VENDA_TYPE(sbe.FORMA_ATEND_VENDA_TYPE(1,NULL),
+                                                          sbe.FORMA_ATEND_VENDA_TYPE(2,NULL));
+														  
+  ksbe_venda_credito.manter_ponto_venda_credito(p_id_ponto_venda_credito => :p_id_ponto_venda_credito,
+                                                p_de_ponto_venda_credito => :p_de_ponto_venda_credito,
+                                                p_id_regiao => :p_id_regiao,
+                                                p_id_rede_comercializacao => :p_id_rede_comercializacao,
+                                                p_id_tipo_estabelecimento => :p_id_tipo_estabelecimento,
+                                                p_tp_ponto_venda => :p_tp_ponto_venda,
+                                                p_forma_atend_venda => p_forma_atend_venda,
+                                                p_fg_recarga_comum => :p_fg_recarga_comum,
+                                                p_fg_recarga_vt => :p_fg_recarga_vt,
+                                                p_fg_recarga_ve => :p_fg_recarga_ve,
+                                                p_fg_recarga_temporal => :p_fg_recarga_temporal,
+                                                p_cep => :p_cep,
+                                                p_nm_logradouro => :p_nm_logradouro,
+                                                p_nr_logradouro => :p_nr_logradouro,
+                                                p_complemento => :p_complemento,
+                                                p_bairro => :p_bairro,
+                                                p_uf => :p_uf,
+                                                p_id_cidade => :p_id_cidade,
+                                                p_nm_usuario => :p_nm_usuario,
+                                                p_msg_sistemica => :p_msg_sistemica);
+end;
+
+declare
+  -- Non-scalar parameters require additional processing 
+  p_diagnostico_cartao LISTA_DIAGNOSTICO_CARTAO_TYPE;
+begin
+  -- Call the procedure
+  
+  p_diagnostico_cartao := SBE.LISTA_DIAGNOSTICO_CARTAO_TYPE(sbe.DIAGNOSTICO_CARTAO_TYPE(1),
+                                                            sbe.DIAGNOSTICO_CARTAO_TYPE(2),
+															sbe.DIAGNOSTICO_CARTAO_TYPE(3),
+															sbe.DIAGNOSTICO_CARTAO_TYPE(4));
+  --
+  ksbe_diagnostico.manter_parametro_exibicao(p_id_perfil => :p_id_perfil,
+                                             p_id_grupo => :p_id_grupo,
+                                             p_id_tipo_credito_eletronico => :p_id_tipo_credito_eletronico,
+                                             p_diagnostico_cartao => p_diagnostico_cartao,
+                                             p_nm_usuario => :p_nm_usuario,
+                                             p_msg_sistemica => :p_msg_sistemica);
+end;
+
+
+declare
+  -- Non-scalar parameters require additional processing 
+  p_formulario_type formulario_type;
+  p_lista_pergunta_resposta_type lista_pergunta_resposta_type;
+  p_lista_id_grupo_entrevistado lista_id_grupo_entrev_type;
+begin
+  -- Call the procedure
+  p_formulario_type := SBE.formulario_type(  NULL  ,'TESTE FORMULARIO GR1'  ,1  ,'N'  ,TO_DATE('01/05/2020','DD/MM/YYYY')  ,TO_DATE('31/05/2020','DD/MM/YYYY')  ,'EMAIL TESTE'  ,11  ,1234567  ,'N'  ,SYSDATE  ,'SISTEMA'  ,NULL  ,NULL  ,NULL  ,1 ,15);
+  --
+  p_lista_pergunta_resposta_type := sbe.LISTA_PERGUNTA_RESPOSTA_TYPE(SBE.PERGUNTA_RESPOSTA_TYPE(179,NULL ,NULL ,NULL ,NULL ,NULL ,NULL ,SYSDATE ,'SISTEMA' ,NULL ,NULL ,2707 ,NULL ,NULL ,NULL ,LISTA_RESPOSTAS_TYPE(RESPOSTA_TYPE(NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL))));
+  --
+  p_lista_id_grupo_entrevistado  := sbe.lista_id_grupo_entrev_type(2,1);
+  --
+  ksbe_pesquisa.manter_formulario(p_id_formulario => :p_id_formulario,
+                                  p_msg_sistemica => :p_msg_sistemica,
+                                  p_formulario_type => p_formulario_type,
+                                  p_lista_pergunta_resposta_type => p_lista_pergunta_resposta_type,
+                                  p_lista_id_grupo_entrevistado => p_lista_id_grupo_entrevistado);
+end;
