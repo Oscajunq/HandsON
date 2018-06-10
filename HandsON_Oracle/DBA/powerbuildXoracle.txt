@@ -1,0 +1,341 @@
+PowerBuilder e Oracle 
+
+1. Objetivo 
+O Objetivo deste documento é servir como guia de referência para os desenvolvedores que irão desenvolver / adequar as aplicações para trabalhar com o SGBD Oracle. 
+Neste documento estão informações importantes que devem ser levadas em consideração tanto no ambiente de desenvolvimento, quanto no ambiente de produção. 
+As informações neste documento podem ser alteradas à medida que são descobertos novos detalhes sobre a utilização do PowerBuilder com Oracle. Caso você possua alguma informação ou correção que deseja inserir neste documento, favor enviar um e-mail para tpereira@attps.com.br para que possamos manter este documento atualizado e confiável. 
+A versão mais atualizada deste documento pode ser encontrada no PublicFolder, na pasta \All Public Folders - Nova Estrutura\01. Corporacao\1.3 Áreas Meio\1.3.1 Engenharia de Produtos e Processos\PowerBuilder. 
+2. Instalando o Cliente Oracle 
+Devemos instalar o cliente Oracle compatível com a versão do servidor Oracle, ou seja, se o servidor for Oracle 7.0.3, devemos instalar o cliente para o Oracle 7.0.3, se o servidor Oracle for 8.1.7, devemos instalar o servidor Oracle 8.1.7, e assim por diante. 
+Em caso onde possuímos na rede dois ou mais servidores Oracle em versões diferentes, devemos optar em instalar o cliente Oracle referente à versão mais recente do mesmo, ou seja, se na nossa rede tivermos um servidor Oracle 7.0.3 e outro 8.1.7, devemos instalar o cliente Oracle 8.1.7, pois o mesmo é compatível com as versões anteriores do Oracle. 
+Caso você não utilize a versão compatível do cliente Oracle, você irá conseguir conectar normalmente ao Banco de Dados, mas poderá ter problemas com a utilização de alguns recursos do Oracle e até mesmo problemas de performance. A Oracle possui uma política agressiva de versões e a cada release que é liberado são constadas alterações críticas na forma de trabalho, podendo surgir novos problemas e obrigando a modificação da forma de trabalho. 
+Não é recomendado que sejam instalados duas versões do cliente Oracle em uma mesma máquina, sugerimos a desinstalação completa de uma versão do cliente antes de se instalar a nova versão do cliente. Algumas versões, possuir BUG´s nos softwares de desinstalação do Oracle, sendo necessário realizar a desinstalação manualmente. Mas, só faça a instalação manual se a instalação automática não funcionar. 
+Para realizar a desinstalação manual do cliente Oracle, siga os seguintes passos: 
+· Apague a pasta de instalação do Oracle (geralmente \Oracle); 
+· Apague os atalhos no menu iniciar\programas; 
+· Apague a chave do registry: HKEY_LOCAL_MACHINE\SOFTWARE\ORACLE; 
+· Apague a chave do registry: HKEY_CURRENT_USER\Software\Oracle; 
+· Reinicie a máquina; 
+
+Após a desinstalação da versão anterior do Oracle, instale a nova versão deixando todas as opções padrões e selecione a opção de programador ou desenvolvedor, dependendo da versão do cliente. 
+
+3. Configurando o Cliente Oracle 
+Existem algumas configurações que devem ser feitas no cliente para que o Oracle identifique o servidor na rede. 
+Para realizar essas configurações, siga os seguintes passos (Esses passos podem variar de acordo com a versão do cliente Oracle instalado): 
+· No menu Iniciar / Programas / Oracle xxxx , entre no aplicativo Net Configuration Assistant (Dependendo da versão do Oracle instalado, esse aplicativo pode estar com o nome um pouco diferente e/ou em uma sub-pasta dentro da pasta de atalho Oracle); 
+· Configuração nos Métodos de Nomeação: 
+i. Selecione Configuração dos Métodos de Nomeação e clique em próximo; 
+ii. Selecione Local, Oracle Names e Nome do Host e clique próximo; 
+iii. Clique próximo e clique próximo novamente; 
+· Voltando a tela inicial novamente; 
+· Configuração do nome de serviço de rede: 
+i. Selecione configuração do nome de serviço de rede e clique em próximo;; 
+ii. Selecione adicionar e clique em próximo; 
+iii. Se o seu servidor for Oracle 8i ou superior, selecione a opção Oracle 8i ou um serviço de banco de dados mais recente, ao contrário, selecione Banco de Dados ou serviço de Oracle 8 release 8.0 (Em alguns servidores que passaram por um processo de migração ou tiveram a instalação personalizada, essas opções podem não funcionar corretamente, por isso, sugiro tentar configuração uma opção, se não funcionar, tente a outra opção); 
+iv. Informe as outras telas com as informações fornecidas pelo DBA e no final clique na opção de teste para realizar um teste de conexão ao banco de dados. Se o teste não funcionar, existe alguma configuração errada, tente refazer o processo e se não conseguir, procure um suporte técnico; 
+v. Finalize a configuração e se deseja adicionar mais algum servidor, repita os passos II a IV; 
+
+Existe uma outra forma de se realizar essas configurações que é copiando os arquivos de configurações a partir de uma máquina que está funcionando. Para fazer isso, procure os arquivo *.ora, que geralmente encontram-se no diretório \\network\ADMIN , e copie os arquivos para o direrório do Oracle na sua máquina (\\network\ADMIN ). 
+4. Testando o Cliente Oracle 
+Para testar o Oracle, abra o SQLPlus e efetue uma conexão ao Oracle. Caso a conexão seja realizada com sucesso, o Oracle está configurado corretamente. 
+Se você não conseguir conectar ao servidor Oracle, verifique se o usuário e senha estão corretos (Você pode fazer este teste a partir de uma máquina que está funcionando ou pedir o DBA para testá-los para você). 
+Caso o usuário esteja correto e você continua sem conseguir conectar ao Oracle, existe alguma configuração errada na sua máquina. Execute o Net Configuration Assistant e verifique as configurações do seu servidor, não se esquecendo de testar no final. 
+5. Conectando o PowerBuilder no Oracle 
+Para realizar a conexão do PowerBuilder ao Oracle é necessário que se verifique primeiramente se a versão do servidor Oracle é suportada pela versão do PowerBuilder, por exemplo, o PowerBuilder 6.5 não suporta conectar ao Oracle 9.x, sendo necessária a migração para PowerBuilder 8 ou superior. Neste caso, você pode até mesmo conseguir conectar ao Oracle 9.x utilizando o cliente do Oracle 8, mas não é um procedimento recomendado pela Sybase e você deverá assumir a responsabilidade dos erros que podem acontecer. 
+Depois de localizada a API para se conectar ao Oracle, clique com o botão direito sobre a mesma e selecione New Profile. Na tela que abrirá, configure as seguintes opções (Essas opções podem variar dependendo da versão do Oracle e estão baseados na configuração do Oracle 8) : 
+· Profile Name (Obrigatório) : 
+i. Descrição : Nome utilizado para você identificar o Servidor/Banco de Dados no ambiente de desenvolvimento; 
+ii. Valor a ser informado : Informe um nome que permita identificar o servidor Oracle 
+· Server (Obrigatório) : 
+i. Descrição : Nome do servidor Oracle 
+ii. Valor a ser Informado : O nome que você configurou no passo 3. Se você tiver utilizando Oracle 7, deve colocar um @ antes do nome, por exemplo, @server1 – Identificador do Servidor Oracle para a máquina; 
+iii. Configuração no objeto transaction : ServerName 
+· Login Id (Obrigatório) : 
+i. Descrição : Usuário no servidor Oracle; 
+ii. Valor a ser informado : O usuário que lhe foi passado para conectar ao servidor Oracle. Caso não possua, favor consultar o seu DBA. 
+iii. Configuração no objeto transaction : LogID 
+· Password (Obrigatório) : 
+i. Descrição : Senha do Usuário no servidor Oracle; 
+ii. Valor a ser informado : A senha que lhe foi passada para conectar ao servidor Oracle. Caso não possua, favor consultar o seu DBA.; 
+iii. Configuração no objeto transaction : LogPass 
+· CommitOnDisconnect (Obrigatório) : 
+i. Descrição : Essa opção informa se o Oracle deve realizar Commit (True) ou Rollback (False) quando ocorrer desconexão e existir transação em aberta, o que pode ser perigoso, pois se estiver TRUE e ocorrer uma falha de luz no meio da transação, ele fará Commit e a integridade do banco de dados ficará errada; 
+ii. Valor a ser informado : False (desmarcado) 
+iii. Configuração no objeto transaction : DBParm = "CommitOnDisconnect='No'/’Yes’” 
+
+· PowerBuilder Catalog Table Owner (Obrigatório) : 
+   i.   Descrição : Usuário que será utilizado para criar as tabelas de sistema do PowerBuilder; 
+   ii.  Valor a ser informado : O usuário que lhe foi passado para conectar ao servidor Oracle; 
+   iii. Configuração no objeto transaction : DBParm = “PBCatalogOwner='????'” 
+
+· Disable Bind (Obrigatório) : 
+   i.   Descrição : informa ao powerbuilder se ele deve enviar os parâmetros implícitos ou camuflados. 
+        Quando os valores vão camuflados através de variáveis, o Oracle armazena o comando em memória, monta o plano 
+        de acesso e apenas substitui as variáveis. Nas próximas vezes que enviar o comando, o Oracle identifica o comando 
+        em memória e apenas substitui as variáveis, ganhando-se performance; 
+   ii.  Valor a ser informado : Em produção, deve-se deixar este parâmetro como 0 (performance) e em desenvolvimento 
+        deve-se deixar este parâmetro como 1 (identificação dos valores das variáveis); 
+   iii. Configuração no objeto transaction : DBParm = “DisableBind=0/1” 
+
+· Static Bind (Obrigatório) : 
+   i.   Descrição : Em datawindow/datastore, verificar se os tipos e tamanhos dos campos no banco de dados são os 
+        mesmos gravados nos objetos; 
+   ii.  Valor a ser informado : 1 pois o comando já é validado ao salvar a DataWindow e não ficar validando produz 
+        uma melhor performance; 
+   iii. Configuração no objeto transaction : DBParm = “StaticBind=1/0” 
+   
+· Enclose Table e Columns name in Quotes (Obrigatório) : 
+   i.   Descrição: informa se é necessário ou não incluir os nomes das tabelas e colunas entre aspas; 
+   ii.  Valor a ser informado : False (desmarcado) 
+   iii. Configuração no objeto transaction : DBParm = “DelimitIdentifier='No'/’Yes’” 
+   
+· DecimalSeparator (Opcional) : 
+   i. Descrição : informa como serão transmitidos os valores numéricos do banco de Dados. Dependendo da instalação
+      do servidor, pode utilizar “.” ou “,”; 
+   ii. Configuração no objeto transaction : DBParm = “DecimalSeparator=','/’.’” 
+   
+· Retrieve Numbers In Internal Format (Opcional) 
+   i. Descrição : dependendo da instalação do Oracle, o PowerBuilder pode não reconhecer os números com casas decimais, sendo necessário configurar essa opção 
+   ii. Configuração no objeto transaction : DBParm = “NumbersInternal=1/0” 
+   
+6. Cuidados nos comando SQL´s 
+Os comandos DML´s (Select, Insert, Update e Delete) possuem algumas particularidades com relação ao Oracle. Quase sempre, a solução para estas particularidades e sempre trabalhar com os comandos SQL´s utilizando DataWindow/DataStore e em modo gráfico, pois assim o PowerBuilder gera a sintaxe para o comando de acordo com o SGBD selecionado e tomando cuidado com as particularidades dos mesmos. 
+Mas, existem comandos que são específicos dos SGBD´s, como Getdate(), Sysdate, Convert(), DateAdd e etc... . Estes comandos devem ser evitados ao máximo e caso não possam ser evitados, será necessário criar um comando para cada SGBD, o que pode ser perigoso, pois o desenvolvedor pode dar manutenção em apenas um comando, esquecendo do outro e causando futuros problemas. 
+Abaixo está uma lista de algumas particularidades nos comandos DML´s no Oracle e como resolve-lós: 
+· Outer Join 
+i. Descrição : O formato do Outer Join do Oracle ( += / =+ ) é diferente da maioria dos SGBDs encontrados nó mercado ( *= / =* / Left Outer Join / Right Outer Join ); 
+ii. Solução : colocar o comando dentro de uma DataWindow e deixa-lá em modo gráfico; 
+· Formato de Data: 
+i. Descrição : O Oracle trabalha com o Formado ‘yyyy-mon-dd’ no formato de data (2003-oct-15 ) utilizado em querys, sendo que pode diferenciar se o oracle foi instalado em idioma (2003-oct-15 é diferente de 2003-out-15) 
+ii. Solução : 
+1. Em SQL Embedded, podemos utilizar variáveis ao invés de montar a data como string ou utilizar a função To_date(‘data’,’Formato’); 
+2. Em DataWindow, pode-se utilizar argumentos ou utilizar a função To_date(‘data’,’Formato’); 
+· Join´s em comando UPDATE e DELETE 
+i. Descrição : O Oracle não permite utilizar Join´s em comandos UPDATE e DELETE; 
+ii. Solução : Reescrever o comando alterando os Join´s por Subqueries; 
+· Funções especificas do Banco de Dados 
+i. Descrição : Existem comandos específicos do SGBD 
+ii. Solução : Duplicar o código ou tentar desenvolver uma função com o mesmo nome e que monte o resultado experado. 
+7. Conectando a Aplicação no Oracle 
+Para realizar a conexão do PowerBuilder ao Oracle é necessário que se verifique primeiramente se a versão do servidor Oracle é suportada pela versão do PowerBuilder, por exemplo, o PowerBuilder 6.5 não suporta conectar ao Oracle 9.x, sendo necessária a migração para PowerBuilder 8 ou superior. Neste caso, você pode até mesmo conseguir conectar ao Oracle 9.x utilizando o cliente do Oracle 8, mas não é um procedimento recomendado pela Sybase e você deverá assumir a responsabilidade dos erros que podem acontecer. 
+Para conectar uma aplicação ao Oracle, as seguintes configurações devem ser feitas: 
+· DBMS (Obrigatório) : 
+i. Descrição : Qual SGBD será conectado 
+ii. Valor a ser Informado : Deve ser informado qual a versão do servidor Oracle que iremos conectar; 
+iii. Configuração no objeto transaction : 
+1. Oracle 7: O73 ORACLE 7.3 
+2. Oracle 8: O84 Oracle8/8i (8.x.4+) 
+3. Oracle 9 : O90 Oracle9i (9.0.1) 
+· Server (Obrigatório) : 
+i. Descrição : Nome do servidor Oracle 
+ii. Valor a ser Informado : O nome que você configurou no passo 3. Se você tiver utilizando Oracle 7, deve colocar um @ antes do nome, por exemplo, @server1 – Identificador do Servidor Oracle para a máquina; 
+iii. Configuração no objeto transaction : ServerName 
+· Login Id (Obrigatório) : 
+i. Descrição : Usuário no servidor Oracle; 
+ii. Valor a ser informado : O usuário que lhe foi passado para conectar ao servidor Oracle. Caso não possua, favor consultar o seu DBA. 
+iii. Configuração no objeto transaction : LogID 
+· Password (Obrigatório) : 
+i. Descrição : Senha do Usuário no servidor Oracle; 
+ii. Valor a ser informado : A senha que lhe foi passada para conectar ao servidor Oracle. Caso não possua, favor consultar o seu DBA.; 
+iii. Configuração no objeto transaction : LogPass 
+· CommitOnDisconnect (Obrigatório) : 
+i. Descrição : Essa opção informa se o Oracle deve realizar Commit (True) ou Rollback (False) quando ocorrer desconexão e existir transação em aberta, o que pode ser perigoso, pois se estiver TRUE e ocorrer uma falha de luz no meio da transação, ele fará Commit e a integridade do banco de dados ficará errada; 
+ii. Valor a ser informado : False (desmarcado) 
+iii. Configuração no objeto transaction : DBParm = "CommitOnDisconnect='No'/’Yes’” 
+· Disable Bind (Obrigatório) : 
+i. Descrição : informa ao powerbuilder se ele deve enviar os parâmetros implícitos ou camuflados. Quando os valores vão camuflados através de variáveis, o Oracle armazena o comando em memória, monta o plano de acesso e apenas substitui as variáveis. Nas próximas vezes que enviar o comando, o Oracle identifica o comando em memória e apenas substitui as variáveis, ganhando-se performance; 
+ii. Valor a ser informado : Em produção, deve-se deixar este parâmetro como 0 (performance) e em desenvolvimento deve-se deixar este parâmetro como 1 (identificação dos valores das variáveis); 
+iii. Configuração no objeto transaction : DBParm = “DisableBind=0/1” 
+· Static Bind (Obrigatório) : 
+i. Descrição : Em datawindow/datastore, verificar se os tipos e tamanhos dos campos no banco de dados são os mesmos gravados nos objetos; 
+ii. Valor a ser informado : 1 pois o comando já é validado ao salvar a DataWindow e não ficar validando produz uma melhor performance; 
+iii. Configuração no objeto transaction : DBParm = “StaticBind=1/0” 
+· Enclose Table e Columns name in Quotes (Obrigatório) : 
+i. Descrição: informa se é necessário ou não incluir os nomes das tabelas e colunas entre aspas; 
+ii. Valor a ser informado : False (desmarcado) 
+iii. Configuração no objeto transaction : DBParm = “DelimitIdentifier='No'/’Yes’” 
+· DecimalSeparator (Opcional) : 
+i. Descrição : informa como serão transmitidos os valores numéricos do banco de Dados. Dependendo da instalação do servidor, pode utilizar “.” ou “,”; 
+ii. Configuração no objeto transaction : DBParm = “DecimalSeparator=','/’.’” 
+· Retrieve Numbers In Internal Format (Opcional) 
+i. Descrição : dependendo da instalação do Oracle, o PowerBuilder pode não reconhecer os números com casas decimais, sendo necessário configurar essa opção 
+ii. Configuração no objeto transaction : DBParm = “NumbersInternal=1/0” 
+8. Distribuindo Aplicações que conectam ao Oracle 
+Para implantarmos um sistema PowerBuilder no cliente, devemos seguir os seguintes passos: 
+· Instalar o cliente Oracle : O cliente Oracle deve ser estalado conforme tópico 2 deste documento; 
+· Configurar o cliente Oracle : O cliente Oracle deve ser configurado conforme tópico 3 deste documento; 
+· Testar o cliente Oracle : O cliente Oracle deve ser testado conforme tópico 4 deste documento; 
+· Instalação do RunTime do PowerBuilder : O RunTime do PowerBuilder é um conjunto de dll´s que devem estar disponíveis para as aplicações PowerBuilder. Ele pode ser instalado localmente ou na Rede, sendo que a performance da instalação na máquina local é muito melhor do que na rede. É recomendo a utilização das últimas dll´s aprovadas pelo suporte técnico da att (informações sobre essas dll´s encontram-se no Public Folders da attps, no caminho \\All Public Folders - Nova Estrutura\01. Corporacao\1.3 Áreas Meio\1.3.1 Engenharia de Produtos e Processos\PowerBuilder\PowerBuilder e Banco de Dados.doc). O RunTime do PowerBuilder consiste das Seguintes dll´s: 
+i. PBVM80.DLL; 
+ii. PBDWE80.DLL; 
+iii. PBRTC80.DLL; 
+iv. PBTRA80.DLL; 
+v. LIBJCC.DLL; 
+vi. DLL para conexão ao Oracle : Essa dll depende da versão do cliente Oracle instalado e pode ser : PBO8480.DLL (Oracle 8) ou PBO7380.DLL (Oracle 7) ou PBO9080.DLL (Oracle 9); 
+· Instalação da Aplicação : A instalação da aplicação pode ser feita localmente ou na rede, sendo que a performance da instalação na máquina local é muito melhor do que na rede; 
+· Testar a aplicação; 
+9. Problemas e soluções 
+Abaixo estão listados alguns problemas e as soluções adotadas para erros relacionados com conexões a servidores Oracle: 
+· Erro ao desinstalar o cliente Oracle : Em algumas versões, o disinstalador do Oracle não funciona, sendo necessário realizá-la manualmente. Para isso, siga os passos listados no Tópico 2 
+· Não é possível conectar ao servidor Oracle : Após a instalação do cliente, não foi possível conectar ao servidor Oracle. Para resolver este problema, siga os seguintes passos: 
+i. PING o servidor Oracle para verificar se o servidor encontra-se na rede; 
+ii. Verifique se as informações para conexão com o servidor (ServiceName, Usuário e Password) estão corretas; 
+iii. Tente conectar utilizando a opção de Oracle 8, se não funcionar, tente com a opção de Orace 7 (Ver tópico 3); 
+iv. Verifique se existe outra máquina que conecta no servidor Oracle e tente configurá-la igualmente (Para realizar este procedimento, copie os arquivos *.ORA que se encontram no diretório \network\ADMIN ) 
+v. Verifique se existe outro cliente Oracle instalado na máquina, caso existam, desinstale todos os clientes e instale o cliente referente a versão do Oracle mais recente da sua rede 
+vi. Se mesmo assim não funcionar, contate o suporte técnico da attps pelo e-mail tpereira@attps.com.br ; 
+· Erro no comando Insert: O Oracle exige a palavra INTO no comando insert (INSERT INTO ...), enquanto outros SGBD´s, como SQL Server e Sybase, aceitam o into, mas não obrigam a utilização. 
+· Erro nos comando UPDATE e DELETE: O oracle não aceita a utilização da clausura FROM no update e delete, sendo necessário alterar os comando para utilizar Subqueries ao invés de Join´s. Mas, este procedimento deve ser feito com cuidado, pois pode interferir na performance de outros SGBD´s, como SQL Server e Sybase 
+· Os relatórios exibem os valores decimais (101.15), como sendo valores inteiros (10115): Dependendo da instalação do servidor, este problema pode ocorrer e para resolvê-lo, devemos passar uma configuração na conexão com o Oracle. Para isso, altere os parâmetros de conexão ( DBParm) e informe para o banco NumbersInternal=1; 
+· Qual o formato de data que devo passar para o Oracle: Devemos utilizar o formado DD-MON-YYYY, mas podemos ter problemas com este formado por exemplo, para passarmos a data 21/10/2003 para um Oracle instalado em português, devemos passar 21-OUT-2003, já o para o Oracle em inglês, devemos passar 21-OCT-2003, e não tem como sabermos se o Oracle está em Português ou Inglês. Por isso, recomendamos sempre passar datas utilizando variáveis datetime do PowerBuilder, assim o próprio PowerBuilder cuida do formado da data. Mas, se mesmo assim você precisar montar a data, recomendamos utilizar a Função To_date (Essa função só existe no Oracle) e montar a data da seguinte forma : To_date(“21/10/2003”,”DD/MM/YYYY”); 
+· Problemas com campos decimais: Dependendo da versão do Oracle e idioma configurado no servidor, podemos ter problemas com a configuração do mesmo. Para resolver este problema, verifique qual o idioma utilizado no servidor e configure o cliente com o mesmo idioma. Para realizar está configuração, siga os seguintes passos: 
+i. Verifique o idioma configurado no servidor ou verifique o idioma em uma máquina que possui o Oracle funcionando. Para realizar essa configuração vá a seguinte chave do registry e verifique a configuração NLS_Lang em HKEY_LOCAL_MACHINE\SOFTWARE\ORACLE\HOME0; 
+ii. Na máquina com problema, altera a configuração NLS_Lang, localizada em HKEY_LOCAL_MACHINE\SOFTWARE\ORACLE\HOME0, para a linguagem compatível com o servidor (Em geral, essa configuração pod ser BRAZILIAN PORTUGUESE_BRAZIL.WE8MSWIN1252 ou AMERICAN_AMERICA.WE8ISO8859P1) 
+· Problema no pacote do Oracle (ORA-12637: Packet receive failed ) : Modifique a propriedade de autenticação. Edite o arquivo sqlnet.ora e altera o seguinte código: SQLNET.AUTHENTICATION_SERVICES= (none) 
+· Não faz o Rollback : Em algumas situações, onde a aplicação é parada no meio de uma transação (falha de Luz, Debug e etc...) a aplicação executa o commit dos dados, quando deveria executar o Rollback. Existe uma configuração no DBParm do Oracle (CommitOnDisconnect) que controla essa opção e o default é realizar o Commit. Por isso, é muito importante sempre passarmos a configuração CommitOnDisconnect=’No’ no SGBD Oracle. 
+
+10. Sobre este documento 
+Este documento foi desenvolvido com o objetivo de agrupar informações sobre a integração com o PowerBuilder e o SGBD Oracle. As informações aqui contidas, foram retiradas de documentos técnicos e experiência de diversos profissionais. 
+
+
+
+PowerBuilder - Oracle 9 
+
+Após vários testes realizados na att e no Banco BNP (Primeiro cliente da att em Oracle 9). 
+
+Chegamos as seguintes conclusões sobre o PowerBuilder e Oracle 9: 
+
+Para conectar uma aplicação no Oracle 9, deve ser utilizado o Cliente do Oracle 9 e a API do Oracle 9 
+( DBMS=O90 ORACLE9I (9.0.1) ). 
+
+Fizemos testes com a API do Oracle 8 ( DBMS=O84 Oracle8/8i (8.x.4+) ) e verificamos 
+uma perda de performance por volta de 30% na média. 
+
+Entrei em contato com a equipe da Sybase (USA) e me explicaram o problema da geração do comando 
+to_timestamp ( Ver e-mail em anexo). 
+
+Resumindo, eles estão utilizando o to_timestamp de acordo com uma nova definição da Oracle de tratamento de campos data. 
+No final deste e-mail, encontra-se o artigo da Sybase explicando melhor esta definição. 
+Para resolver este problema, é necessário passar um parâmetro no DBParm (Timestamp='No'). 
+Abaixo, estou enviando um modelo de como deve ser configurado os parâmetros de conexão para Oracle 9 
+
+// Profile attbh253_oracle9SQLCA.DBMS = "O90 ORACLE9I (9.0.1)"SQLCA.LogPass = "MeuPassord"SQLCA.ServerName = "attbh253"SQLCA.LogId = "MeuUsuario"SQLCA.AutoCommit = FalseSQLCA.DBParm = "CommitOnDisconnect='No',DelimitIdentifier='No',PBCatalogOwner='MeuUsuario'.TimeStamp='No'" 
+OBS.: 
+1) Os parâmetros CommitOnDisconnect,DelimitIdentifier, TimeStamp são obrigatórios e devem ser colocados em 
+   todos os cliente Oracle 9; 
+2) O parâmetro DisableBind pode ser utilizado em desenvolvimento ou produção, para realizar o Trace do PowerBuilder. 
+   Mas, nunca deve ser deixado em produção, pois causa uma grande perda de performance e segurança 
+3) Pode existir outras parametros de DbParm utilizados em alguns clientes, dependendo da configuração do servidor do mesmo. 
+
+
+posted by Thiago Campos Pereira at 12/29/2004 01:24:00 PM | 0 comments  
+
+Dica de Performance : Concatenação de String 
+
+Caso você esteja trabalhando com concatenação de string, é comum encontrarmos o seguinte código: 
+
+A = “String incial” 
+A = A + “Segundo String” 
+A = A + “Terceiro String” 
+A = A + “Quarto String 
+
+Quando se trabalha com esta forma de se concatenar string, perde-se muito em performance, pois cada vez que é feita 
+a concatenação é criada uma nova área de memória, copiado o valor para está área de memória e destruindo a área de
+memória antiga. Em um processo onde se passa por este código muitas vezes, há um ganho significativo de performance. 
+Para otimizar o código, recomenda-se alterar o código para que fique da seguinte forma: 
+
+A = “String incial” + “Segundo String” + “Terceiro String” + “Quarto String ..... 
+
+
+Está dica vale para qualquer ferramenta de Desenvolvimento (.NET, PowerBuilder, Delphi, C/C++ e etc...) 
+
+Em um teste feito na att, conseguimos melhorar o processamento de uma rotina que demorava 3 minutos para 10 segundos, 
+apenas realizando a alteração acima. 
+
+
+
+PowerBuilder - Conectando com Oracle 9 
+
+1 – Objetivo 
+     Este documento tem como objetivo orientar as equipes nós procedimentos necessários para os sistemas 
+     utilizarem o SGBD Oracle 9.x. 
+     
+2 – Configurações do Cliente Oracle 
+     Para se conectar com o Oracle 9 recomenda-se a utilização do cliente do Oracle da mesma versão do servidor 
+     (Cliente do Oracle 9, com o mesmo release do servidor). 
+     
+     A conexão utilizando Clientes do Oracle 8 não é recomendada, apesar de funcionar, pois testes indicaram uma 
+     perda de performance de 30% nós acessos a banco de dados, além da impossibilidade de se utilizar os recursos. 
+     
+     Ao instalar o cliente Oracle 9, deve-se tomar cuidado com versões anteriores deste SGBD. O recomendado é que 
+     sejam desinstaladas todas as versões anteriores de Cliente Oracle nas máquinas (Em algumas versões, a opção de
+     desinstalação do Oracle não funciona, sendo necessário remover os arquivos e chaves do Registry manualmente). 
+     
+     Após a desinstalação completa, deve-se instalar o novo cliente Oracle, evitando conflitos entre versões. 
+     
+     Lembramos que as versões mais recentes são compatíveis com versões anteriores, permitindo o Cliente do Oracle 9 
+     conectar em um Servidor com Oracle 8 ou Oracle 7. 
+     
+     Outro ponto interessante de se observar e a chave do registry que define com o idioma (Language) que será 
+     utilizado pelo Cliente. Está chave e definida automaticamente pelo cliente Oracle no momento da instalação 
+     do mesmo, onde o instalador observa a configuração da máquina (Regional Settings, Versão do Sistema Operacional
+     e etc...) e configura o Cliente. Está “auto-configuração” nem sempre funciona, podendo causar conflitos entre o
+     servidor e o cliente (Tratamento de pontos decimais, Formato de Data e etc...). 
+     
+     Para ter certeza que o idioma do cliente está correto, deve-se verificar a chave do Registry NLS_LANG 
+     (Geralmente localizada em HKEY_LOCAL_MACHINE\SOFTWARE\ORACLE\HOME0) e verificar se a mesma está compatível 
+     com a configuração no servidor. No Brasil, os valores mais encontrados nesta chave são 
+     BRAZILIAN PORTUGUESE_BRAZIL.WE8MSWIN1252 (Formato Padrão para o Brasil) ou 
+     AMERICAN_AMERICA.WE8ISO8859P1 (Formato Padrão para o EUA). 
+
+
+3 – Configurações no PowerBuilder 
+
+     Para se conectar o PowerBuilder no Oracle 9, devemos levar em consideração os seguintes pontos: 
+     API : Devemos utilizar a API do Oracle 9 para a conexão (DBMS=O90 ORACLE9I (9.0.1)) e para utilizarmos 
+     está API, é necessário que o Cliente do Oracle 9 esteja instalado na máquina. A conexão utilizando a API de 
+     Oracle 8 funciona (utilizando o Cliente 8 ou 9), mas causa a perda de performance relativa a 30%. 
+     
+     DBPARM : Ao se conectar utilizando o Cliente do Oracle 9, é obrigatória a configuração dos seguintes parâmetros 
+     em desenvolvimento, Homologação e produção, e deve ser configurado nos arquivos INI e na Dr.Lock: 
+     
+     Timestamp (TimeStamp='No') : Este parâmetro é novo e configura o PowerBuilder para tratar os campos DateTime 
+     como valores DateTime, e não com valores TimesTamp (Está é a nova definição da Oracle para campos DateTime e, 
+     por isso, a forma de trabalho Default da API do Oracle 9); 
+     
+     CommitOnDisconnect (CommitOnDisconnect='No') : Por default, quando ocorre uma desconexão com o Banco de Dados, 
+     é executado o Commit nos dados, o que é errado e pode causar erros nos dados. Está configuração força o Banco 
+     de Dados realizar um RollBack no momento que ocorre uma desconexão com o mesmo (Falha de luz, Parada no Debug, 
+     CTRL + ALT + DEL, etc...) 
+     
+     DelimitIdentifier (DelimitIdentifier='No') : Este parâmetro deve ser configurado para evitar a utilização de 
+     “ (Aspas Duplas) no nome das tabelas nas queries. Em sistemas que utilizam vários SGBDs, como o caso dos sistemas 
+     da attps, é necessário selecionar esta opção para se evitar conflitos com outros SGBDs.   
+     
+     PBCatalogOwner (PBCatalogOwner=’sis_att_sistemas’) : Está configuração indica em qual Catalog (Usuário do banco de 
+     dados Oracle) estão as tabelas do sistema do PowerBuilder. É aconselhável configurar este parâmetro com o mesmo 
+     nome do usuário que é utilizado para conectar ao Banco de Dados    
+     
+     DisableBind (DisableBind=0) : Está configuração habilita o recurso de BIND do oracle, o que aumenta a 
+     segurança no trafego de informações e o ganho de performance nas queries. O grande problema deste parâmetro é 
+     que não permite visualizar as informações (parâmetros) que o PowerBuilder está enviando para o Banco de Dados,
+     dificultando a execução dos Traces. Devemos tomar muito cuidado quando desabilitarmos o BIND (DisableBind=1),
+     principalmente no ambiente de produção, sempre lembrando de Habilitá-lo (DisableBind=0) novamente no final 
+     dos testes 
+
+     Abaixo encontra-se um exemplo de parâmetros de conexão para Oracle 9: 
+     // Profile attbh253_oracle9 
+     SQLCA.DBMS = "O90 ORACLE9I (9.0.1)" 
+     SQLCA.LogPass = <*******> 
+     SQLCA.ServerName = "attbh253" 
+     SQLCA.LogId = "sis_att" 
+     SQLCA.AutoCommit = False 
+     SQLCA.DBParm = "CommitOnDisconnect='No',DelimitIdentifier='No',PBCatalogOwner='sis_att', DisableBind=0" 
+
+4 – DLLs necessárias ao PowerBuilder 
+     Para que o PowerBuilder trabalhar com o Oracle 9, são necessárias as seguintes DLLs, com as respectivas versões: 
+     · pbdwe80.dll (Versão 8.0.3.9977) 
+     · pbrtc80.dll (Versão 8.0.3.9977) 
+     · pbvm80.dll (Versão 8.0.3.9977 ) 
+     · LIBJCC.DLL (25/06/2003 03:02:00) 
+     · PBO9080.DLL (Versão 8.0.3.9977) 

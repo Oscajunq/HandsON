@@ -1,0 +1,137 @@
+
+PARÂMETROS DE ARMAZENAMENTO
+
+ 
+ 
+
+Os blocos de dados formam as estruturas lógicas de menor nível em um Banco de Dados. Um bloco de dados corresponde a um número especifico de bytes
+ guardados fisicamente em disco.
+
+Os parâmetros PCTFREE e PCTUSED permitem aos administradores controlarem o uso do espaço livre para novas inserções de informações e atualizações nas 
+linhas existentes nos blocos de dados, sendo que o parâmetro PCTFREE também é utilizado para especificar como os blocos de dados são usados nos índices, no momento da criação dessas estruturas.
+
+O parâmetro PCTFREE especifica a percentagem de um bloco que será reservada para possíveis atualizações de linhas que já existem no bloco. P.ex., 
+o parâmetro PCTFREE se especificado como 20% no comando CREATE TABLE, faz com que cada bloco de dado usado para armazenar as linhas da tabela criada 
+possua 20% de seu espaço reservado para atualizações das linhas já existentes. Portanto, somente 80% dos blocos usados para armazenar as linhas dessa
+ tabela estão disponíveis para novas inserções de informações.
+
+Depois que um bloco torna-se preenchido por dados, de acordo com o especificado pelo parâmetro PCTFREE, o bloco não é considerado para novas inserções 
+de linhas até que a percentagem de uso desse bloco torne-se menor que o parâmetro PCTUSED.
+
+Até que o percentual especificado por PCTUSED seja atingido, através da remoção ou atualização das linhas do bloco de dados, o espaço disponível somente 
+pode ser usado para atualizações das linhas já existentes. A partir do momento que o limite especificado pelo parâmetro PCTUSED for atingido, o bloco 
+será candidato a receber novas linhas inseridas.
+
+Os parâmetros PCTFREE e PCTUSED trabalham conjuntamente para otimizar a utilização do espaço nos blocos de dados das extensões de um segemento de dados
+
+ 
+
+
+Ex.: Bloco de Dados com PCTFREE(10%) e PCTUSED(40%)
+
+ 
+
+CREATE TABLE bancos(
+ bco_cod                 NUMBER(4,0) NOT NULL,
+ bco_raz_soc          VARCHAR2(40) NOT NULL,
+ bco_vlr_lim_cre      NUMBER(19,2) NOT NULL,
+ bco_imd_cod         VARCHAR2(6) NOT NULL,
+ bco_mun_cod         NUMBER(5,0) NOT NULL,
+ bco_nom_fan         VARCHAR2(20) NULL,
+ bco_fon                  VARCHAR2(8) NULL,
+ bco_vlr_lim_uti         NUMBER(19,2) NULL
+ )
+ PCTFREE 10
+ PCTUSED 40
+ INITRANS 1
+ MAXTRANS 255
+ TABLESPACE TSDGEF0D
+       STORAGE (
+       INITIAL 32768
+       NEXT 32768
+       MINEXTENTS 1
+       MAXEXTENTS 121
+       PCTINCREASE 0
+ )
+ ;
+ 
+
+
+
+
+
+· As linhas são inseridas até que atinjam 90% do espaço do bloco;
+
+· As atualizações das linhas existentes podem usar o espaço livre de 10%   reservado no bloco. Nenhuma linha pode ser inserida;
+
+· Devido à remoção ou atualizações de linhas, quando o percentual atingido for menor que 40%, novas linhas podem ser inseridas no bloco de dados.
+ 
+Da mesma forma que o Oracle prealoca espaço contíguo em disco para os tablespaces, usando arquivos de dados, ele prealoca espaço contíguo dentro dos 
+arquivos de dados de um tablespace para tabelas e índices, usando extensões. Uma extensão (extent) nada mais é do que o número de blocos de dados 
+contíguos que o Oracle aloca para um objeto, quando é necessário mais espaço para os dados do objeto. O grupo de todas as extensões de um objeto 
+é chamado de um segmento.
+
+Quando o administrador cria uma tabela ou um índice, o Oracle aloca uma ou mais extensões para armazenar os dados iniciais do objeto. A medida que 
+o usuário insere dados no objeto, o Oracle aloca automaticamente extensões adicionais, conforme a necessidade, para armazenar os dados que não 
+couberem no conjunto atual de extensões definidas para o objeto.
+
+Existem diversos parâmetros de armazenamento que permitem ao administrador controlar o modo como o Oracle aloca extensões reduzindo a fragmentação 
+de dados e aumentando o desempenho em relação ao I/O de disco. São eles:
+
+
+
+
+INITIAL
+
+
+
+ determina o tamanho, em bytes, da extensão inicial de um objeto. O parâmetro INITIAL serve para prealocar todo ou grande parte do espaço que se
+  supõe que o objeto exigirá. Dessa forma todos os dados do objeto, ou grande parte deles, residirão em conjunto contíguo de blocos de dados.
+
+
+NEXT
+
+
+
+ determina o tamanho, em bytes, da próxima extensão que o Oracle alocará, se necessário, para o objeto. O valor de next pode aumentar, dependendo 
+ do valor de PCTINCREASE.
+
+
+MINEXTENTS 
+
+
+determina a quantidade de extensões a prealocar ao criar uma tabela ou índice. P.ex., se o administrador criar uma tabela e especificar MINEXTENTS
+ como 2, o Oracle alocará imediatamente duas extensões para a tabela.
+
+
+MAXEXTENTS 
+
+determina o número máximo de extensões que o Oracle pode alocar para uma tabela ou índice. O administraodr usa MAXEXTENTS para controlar efetivamente
+ o tamanho máximo de um objeto. Existe também um tamanho máximo de acordo com o Sistema Operacional.
+
+
+PCTINCREASE 
+
+
+determina o fator de crescimento à medida que o Oracle aloca novas extensões para uma tabela ou índice. P.ex., se o administrador definir o parâmetro 
+NEXT de uma tabela com 200K e o paraâmetro PCTINCREASE com 50, a segunda extensão será de 200K, a terceira, de 300K, a quarta, de 450K, e assim por diante.
+ O administrador deve usar PCTINCREASE para aumentar o tamanho das extensões subsequentes e tentar reduzir a fragmentação de dados do objeto.
+ 
+À medida que uma transação manipula dados de um objeto, o Oracle precisa alocar pequenas quantidades de espaço nos blocos de dados correspondentes 
+do objeto, para armazenar as informações do processamento interno até que a transação seja confirmada ou desfeita. Os parâmetros INITRANS 
+e MAXTRANS permitem ajustar o desempenho em relação a esse mecanismo de processamento interno a favor dessa transações.
+
+
+
+
+INITRANS 
+
+prealoca espaço para um número especificado de entradas de transações em cada bloco de dados de um objeto. Assim o Oracle não precisa alocar espaço
+ dinamicamente para as entradas de transações quando as mesmas entrarem nos blocos de dados. O valor default é 1.
+
+
+MAXTRANS 
+
+Limita o número de transações que podem entrar paralelamente em um bloco de dados e, consequentemente, a quantidade de espaço que as entradas de 
+transações podem consumir em um bloco em determinado momento. Se o número de transações de MAXTRANS estiver usando um bloco simultaneamente, 
+a próxima transação a solicitar informações do bloco precisa esperar até que a outra transação usando o bloco seja efetivada ou desfeita.

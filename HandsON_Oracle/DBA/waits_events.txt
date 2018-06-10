@@ -1,0 +1,609 @@
+http://www.dbspecialists.com/files/presentations/wait_events.html
+
+Interpreting Wait Events to Boost System Performance
+by Roger Schrag 
+Database Specialists, Inc. 
+
+
+Introduction 
+
+People seem to have an insatiable appetite for speed. No matter how fast an application runs, users always seem to want it to run faster. 
+Since everybody looks to the database administrator when system performance or scalability is in question, it's no wonder DBAs are always 
+looking for ways to estimate, measure, and improve system performance. 
+
+A few years back, cache hit ratios were thought by some to be the ultimate indicator of database performance. "You cannot survive in an 
+e-commerce environment with a buffer cache hit ratio of less than 99.9%!" exclaimed some. More recently, the wait event interface has 
+come into vogue. Many DBAs have heard about wait events, and many know which v$ views to look at, but few resources are available that 
+discuss techniques for using the wait event interface and even fewer walk through concrete examples of how to use wait event information 
+in order to boost system performance. 
+
+In this paper we will first define what wait events are and how to collect wait event information. Then we'll move on to examples of how
+ wait event information paved the way to solving real-world performance problems. The material in this paper is based on my real-life experience.
+  I've been working with Oracle databases for over twelve years, and tuning problem systems is what I do for a living (and what I enjoy most about
+   being a DBA). 
+
+What are Wait Events? 
+
+The wait event interface appeared in the first production release of Oracle 7. For many years it remained undocumented and few people outside the
+ kernel group at Oracle Corporation knew of its existence. By Oracle 7.3 the word was out, and the documentation that comes with Oracle 8.0 and later 
+ gives a pretty good explanation of the wait event interface. The basic idea hasn't changed, but Oracle continues to add new wait events as they add
+  new functionality to the Oracle kernel. 
+
+In this section we will explain what wait events are and why the data provided by the wait event interface can be helpful. 
+
+"Wait Event" Defined 
+
+At any given moment, every Oracle process is either busy servicing a request or waiting for something specific to happen. By "busy" we mean that
+ the process wishes to use the CPU. For example, a dedicated server process might be performing an arithmetic operation while executing a PL/SQL block. 
+ This process would be said to be busy and not waiting. The LGWR process, meanwhile, might be waiting for the operating system to indicate that 
+ the redo log buffer has successfully been written to disk. In this case the LGWR process is waiting. 
+
+The kernel developers at Oracle have defined a list of every possible event that an Oracle process could be waiting for. In Oracle 8.0 there were 
+158 such wait events. In Oracle 8i Release 3 there are 217. At any moment, every Oracle process that is not busy is waiting for one of these events 
+to occur. Suppose a dedicated server process is waiting for an application to submit a SQL statement for execution. This wait event is called
+ "SQL*Net message from client."  Another dedicated server process might be waiting for a row-level lock on the INVOICES table to be freed so 
+ that an UPDATE statement can continue. That wait event is called "enqueue." 
+
+It turns out that Oracle is very diligent about tracking wait event information and making it available to DBAs. We call this the "wait event interface." 
+By querying v$ views, we can see what events processes are waiting on to an amazing level of detail. For example, we might learn that a dedicated server 
+process has been waiting 30 milliseconds for the operating system to read eight blocks from data file 42, starting at block 18042. We can also see
+ summary information of how much time each Oracle process has spent waiting on each type of wait event for the duration of the process, and we can 
+ also direct an Oracle process to write detailed wait event data to a trace file. 
+
+Why Wait Event Information is Useful 
+
+Using the wait event interface, you can get insights into where time is being spent. If a report takes four hours to complete, for example, the wait 
+event interface will tell you how much of that four hours was spent waiting for disk reads caused by full table scans, disk reads caused by index 
+lookups, latch contention, and so on. 
+
+The wait event interface gives you much more information to work with than cache hit ratios do. The wait event interface gives both breadth and depth 
+in the information it provides you. You get data that can touch upon so many different areas of your database such as disk I/O, latches, parallel 
+processing, network traffic, checkpoints, and row-level locking. At the same time, you get incredible detail such as the file number and block 
+number of a block being read from disk, or the name of a latch being waited on along with the number of retries. 
+
+The wait event interface will not always give you all of the information you need in order to diagnose and solve a problem, but it will certainly 
+point you in the right direction. You might think the buffer cache is too small because the cache hit ratio is only 70%, but in fact, the 
+application's slow response time could be caused by latch contention in the shared pool, a bottleneck in the log writer, or any of a number of 
+other things. 
+
+Common Wait Event Names and What They Mean 
+
+Although there are many different types of wait events, the majority of them come up very infrequently or tend not to be significant. In practice, 
+only a few dozen wait events tend to be of interest to most DBAs. The rest are rather obscure, or pertain to Oracle features not in use, or occur
+ so infrequently that you don't need to worry about them. You'll see different wait events surfacing in different environments based on which Oracle
+  features have been implemented. For example, the PX wait events won't appear if you aren't using parallel query, and the virtual circuit status wait
+   event won't appear if you are not using the multi-threaded server. 
+
+Here are some of the most common wait events, and what they mean: 
+  Wait Event Description 
+enqueue The process is waiting on an enqueue (a lock you can see in v$lock). This commonly occurs when one user is trying to update a row in a 
+table that is currently being updated by another user. 
+library cache pin  The process wants to pin an object in memory in the library cache for examination, ensuring no other processes can update the 
+object at the same time. This happens when you are compiling or parsing a PL/SQL object or a view. 
+library cache load lock  The process is waiting for the opportunity to load an object or a piece of an object into the library cache. (Only one 
+process can load an object or a piece of an object at a time.) 
+latch free  The process is waiting for a latch held by another process. (This wait event does not apply to processes that are spinning while 
+waiting for a latch; when a process is spinning, it is not waiting.) 
+buffer busy waits  The process wants to access a data block that is currently not in memory, but another process has already issued an I/O request 
+to read the block into memory. (The process is waiting for the other process to finish bringing the block into memory.) 
+control file sequential read  The process is waiting for blocks to be read from a control file. 
+control file parallel write The process has issued multiple I/O requests in parallel to write blocks to all control files, and is waiting for all
+ of the writes to complete. 
+log buffer space  The process is waiting for space to become available in the log buffer (Space becomes available only after LGWR has written the
+ current contents of the log buffer to disk.) This typically happens when applications generate redo faster than LGWR can write it to disk. 
+log file sequential read  The process is waiting for blocks to be read from the online redo log into memory. This primarily occurs at instance
+ startup and when the ARCH process archives filled online redo logs. 
+log file parallel write  The process is waiting for blocks to be written to all online redo log members in one group. LGWR is typically the only 
+process to see this wait event. It will wait until all blocks have been written to all members. 
+log file sync  The process is waiting for LGWR to finish flushing the log buffer to disk. This occurs when a user commits a transaction. 
+(A transaction is not considered committed until all of the redo to recover the transaction has been successfully written to disk.) 
+db file scattered read  The process has issued an I/O request to read a series of contiguous blocks from a data file into the buffer cache,
+ and is waiting for the operation to complete. This typically happens during a full table scan or full index scan. 
+db file sequential read  The process has issued an I/O request to read one block from a data file into the buffer cache, and is waiting 
+for the operation to complete. This typically happens during an index lookup or a fetch from a table by ROWID when the required data block
+ is not already in memory. Do not be misled by the confusing name of this wait event! 
+db file parallel read  The process has issued multiple I/O requests in parallel to read blocks from data files into memory, and is waiting 
+for all requests to complete. The documentation says this wait event occurs only during recovery, but in fact it also occurs during regular 
+activity when a process batches many single block I/O requests together and issues them in parallel. (In spite of the name, you will not
+ see this wait event during parallel query or parallel DML. In those cases wait events with PX in their names occur instead.) 
+db file parallel write  The process, typically DBWR, has issued multiple I/O requests in parallel to write dirty blocks from the buffer cache 
+to disk, and is waiting for all requests to complete. 
+direct path read, direct path write The process has issued asynchronous I/O requests that bypass the buffer cache, and is waiting for them to 
+complete. These wait events typically involve sort segments. 
+
+
+There are several wait events that we call "idle events" because each of these wait events typically occurs when the Oracle process has 
+nothing to do and is waiting for somebody to give it a task. Idle events are usually not very interesting from a tuning standpoint, so we 
+usually overlook them when evaluating data extracted from the wait event interface. The common idle events are as follows: 
+  Idle Wait Events 
+client message PX Idle Wait 
+dispatcher timer rdbms ipc message 
+lock manager wait for remote message smon timer 
+Null event SQL*Net message from client 
+parallel query dequeue SQL*Net message to client  
+pipe get SQL*Net more data from client  
+PL/SQL lock timer virtual circuit status 
+pmon timer wakeup time manager 
+
+
+What Wait Event Information Does Not Provide 
+
+If an Oracle process has work to do but must wait for something to happen before it can continue, then the process will be waiting on a non-idle wait event. If a process has nothing to do, it will be waiting on an idle wait event. So what happens if a process has work to do and is busy doing it? When a process is busy, there will be no information in the wait event interface (since the process is not waiting). 
+
+When we look at the wait event information extracted from an Oracle instance, we see detailed information about how many times and how much time was spent waiting for specific events to occur. But we do not see anything about the time periods in which the process requested use of the CPU. This means that the wait event interface is not able to provide information about the following: 
+
+Time spent using the CPU 
+Time spent waiting for a CPU to become available 
+Time spent waiting for requested memory to be swapped back in to physical memory 
+This is important to keep in mind because there is an easy trap to fall into. You could be troubleshooting a very slow SELECT statement and learn from the wait event interface that the process does not have significant wait events when running the query. This could lead you to think that the statement is as optimal as it can be, and that it just takes a long time to run. In fact, however, the query might be performing huge numbers of logical reads and the number of buffer gets could be reduced by rewriting the query. 
+When Oracle needs to access a data block and the block is already in the buffer cache, a logical read occurs with no physical read. The process is able to read the block without the occurrence of any wait events. Large amounts of CPU time could be consumed on significant numbers of logical reads, and the wait event interface will have nothing to show for the elapsed time. 
+
+A Note About the timed_statistics Parameter 
+
+The Oracle kernel is capable of timing many activities including wait events to a resolution of one centisecond (0.01 second). Oracle does not collect timed statistics by default, but we can easily change this with the timed_statisitcs instance parameter. When timed_statistics is set to FALSE, all times in the wait event interface will appear as zero. You may enable timed statistics collection at the instance or the session level with the following commands: 
+
+        ALTER SYSTEM SET timed_statistics = TRUE;
+        ALTER SESSION SET timed_statistics = TRUE;
+You may also enable timed statistics at the instance level on the next and all subsequent instance restarts by adding the following line to the instance parameter file: 
+        timed_statistics = true
+In practice, the overhead of collecting timed statistics is extremely small. In most cases, the benefit you'll get from having timing information at your disposal will outweigh the performance overhead. Many DBAs choose to run their production systems with timed statistics enabled at all times. 
+Collecting Wait Event Information 
+
+The wait event interface consists of four dynamic performance views (also known as "v$ views") and one system event. Any user with the SELECT ANY TABLE system privilege or the SELECT_CATALOG_ROLE role can query the v$ views. Only users who can connect to the database as SYSDBA can set the system event for other database sessions. In a typical environment, DBAs have access to the wait event interface but general users do not. 
+
+The v$system_event and v$session_event views provide cumulative wait event information for the instance as a whole and for each process, respectively. The v$session_wait view provides detailed information about the active or most recent wait event for each process. The contents of the v$event_name view, meanwhile, do not change. This view lists all wait events built into the Oracle kernel and the parameters for each one. 
+
+In addition to the four dynamic performance views, Oracle provides a special system event (not to be confused with a wait event!) that is very helpful in collecting wait event information. Event 10046 allows you to direct an Oracle process to write wait event information to a trace file for later evaluation. 
+
+The v$system_event View 
+
+The v$system_event view shows one row for each wait event name, along with the total number of times a process has waited for this event, the number of timeouts, the total amount of time waited, and the average wait time. All of these figures are cumulative for all Oracle processes since the instance started. Wait events that have not occurred at least once since instance startup do not appear in this view. 
+
+The v$system_event view has the following columns: 
+
+        Name                            Null?    Type
+        ------------------------------- -------- ----
+        EVENT                                    VARCHAR2(64)
+        TOTAL_WAITS                              NUMBER
+        TOTAL_TIMEOUTS                           NUMBER
+        TIME_WAITED                              NUMBER
+        AVERAGE_WAIT                             NUMBER
+EVENT is the name of the wait event. You can see a list of all wait event names known to your Oracle kernel with the following query: 
+        SELECT name FROM v$event_name;
+TOTAL_WAITS is the total number of times a process has waited for this event since instance startup. This includes daemon processes like PMON and SMON, in addition to dedicated server and multi-threaded server processes. It also includes processes from database sessions that have subsequently ended. 
+TOTAL_TIMEOUTS is the total number of times a process encountered a timeout while waiting for an event. When a process begins to wait for an event, it specifies a timeout period after which the operating system should wake it up if the event has not yet transpired. For example, when an Oracle process issues an I/O request to read a block from a data file (the db file sequential read wait event), the process sets a timeout of one second. Usually the I/O request will complete in less than one second and no timeout will occur. But if the read should take longer than one second for whatever reason, a timeout will occur and the process will wake up. The process might do some minor housekeeping, but it will likely just begin another timeout period of one second and continue waiting for the same event. 
+
+TIME_WAITED and AVERAGE_WAIT show the cumulative and average time spent by processes waiting for this event, in centiseconds. Divide these figures by 100 in order to get the wait time in seconds. These two columns will show as zero if timed statistics are not enabled. 
+
+Consider the following query from v$system_event: 
+
+         SELECT event, time_waited
+           FROM   v$system_event
+          WHERE  event IN ('SQL*Net message from client', 'smon timer','db file sequential read', 'log file parallel write');
+
+        EVENT                                                  TIME_WAITED
+        ------------------------------------------------------ -----------
+        log file parallel write                                     159692
+        db file sequential read                                      28657
+        smon timer                                               130673837
+        SQL*Net message from client                               16528989
+
+Since instance startup, processes on this system have waited a total of 286.57 seconds while reading single data file blocks from disk, 
+and over 1596 seconds (26 minutes) while writing redo to the online redo logs. A huge amount of time has been spent waiting on the smon 
+timer and SQL*Net message from client events, but these are both idle wait events so we don't worry about them. 
+(The SMON process spends a lot of time sleeping between consecutive checks of the system, and many dedicated server processes 
+spend a lot of their time waiting for the application to submit a SQL statement for processing.) 
+
+A partir do momento que a instancia foi inicializada, os processos no sistema obteve um tempo de espera no total de 286,57 segundo enquanto fazia a leitura 
+dos blocos de dados do arquivo em disco, e mais 1.596 segundos (26 minutos) para escrever o arquivo de redo logs online. 
+Uma enorme quantidade de tempo foi gasto esperando no processo "smon timer" e "SQL*Net message from client", 
+mas estes são os eventos de espera ociosa por isso não se preocupe com eles.
+(O processo SMON gasta muito tempo de sono entre os controlos consecutivos de sistema e servidor dedicado muitos processos
+gastam muito do seu tempo de espera para a aplicação de apresentar uma declaração SQL para processamento.)
+
+The v$session_event View 
+
+The v$session_event view is a lot like the v$system_event view, except that it shows separate rows of information for each Oracle process. As with v$system_event, event names do not appear in this view if the process has not waited for them at least once. Also, when an Oracle process terminates (as in the case of when a user logs off the database) all of the rows in v$session_event for that process permanently disappear. 
+
+The v$session_event view has the following columns: 
+
+        Name                            Null?    Type
+        ------------------------------- -------- ----
+        SID                                      NUMBER
+        EVENT                                    VARCHAR2(64)
+        TOTAL_WAITS                              NUMBER
+        TOTAL_TIMEOUTS                           NUMBER
+        TIME_WAITED                              NUMBER
+        AVERAGE_WAIT                             NUMBER
+        MAX_WAIT                                 NUMBER
+SID indicates the session ID of the process waiting for the event. You can query v$session in order to determine the SID of the session whose wait events you want to investigate. The next five columns in the v$session_event view are the same as in the v$system_event view, except that now they pertain to the one specific process instead of all processes. 
+MAX_WAIT indicates the maximum amount of time the process had to wait for the event. Like TIME_WAITED and AVERAGE_WAIT, the unit of measure is centiseconds and will display as zero if timed statistics are not enabled. 
+
+Consider the following query which displays all wait event information for my SQL*Plus session: 
+
+        SQL> SELECT event, total_waits, time_waited, max_wait
+          2  FROM   v$session_event
+          3  WHERE  SID =
+          4         (SELECT sid FROM v$session
+          5          WHERE audsid = USERENV ('sessionid') );
+
+        EVENT                          TOTAL_WAITS TIME_WAITED   MAX_WAIT
+        ------------------------------ ----------- ----------- ----------
+        db file sequential read                552         240          3
+        db file scattered read                  41          31          2
+        SQL*Net message to client               73           0          0
+        SQL*Net message from client             72      339738     104589
+
+        SQL>
+You can see that the Oracle process serving my session has spent 2.71 seconds waiting for disk I/O. Although there have been 73 instances where the process waited for the networking software to allow it to send a message to the client (the SQL*Plus program running on my desktop), each of these waits was shorter than the 0.01 second resolution of Oracle's timed statistics. Far and away, the Oracle process has spent the vast majority of its time waiting for me to enter a SQL statement at the SQL*Plus prompt. 
+The v$event_name View 
+
+The v$event_name view shows reference information rather than up-to-the-moment information about instance performance. This view shows one row for each wait event known to the Oracle kernel. Associated with each wait event are up to three parameters--additional pieces of information that provide more detail about a wait situation. 
+
+The v$event_name view has the following columns: 
+
+        Name                            Null?    Type
+        ------------------------------- -------- ----
+        EVENT#                                   NUMBER
+        NAME                                     VARCHAR2(64)
+        PARAMETER1                               VARCHAR2(64)
+        PARAMETER2                               VARCHAR2(64)
+        PARAMETER3                               VARCHAR2(64)
+The v$system_event and v$session_event views show cumulative information about past waits in summary form, leaving out parameter information about each individual wait. As we will see in the next sections, wait event parameters come into play in the v$session_wait view and system event 10046. 
+The v$session_wait View 
+
+The v$session_wait view shows one row for each Oracle process. The row indicates the name of the wait event and additional parameters that provide further information about exactly what the process is waiting for (or information about the most recent wait event if the process is not currently waiting). While the v$system_event and v$session_event views show cumulative wait event information, the v$session_wait view shows information as of the present moment only. 
+
+The v$session_wait view has the following columns: 
+
+        Name                            Null?    Type
+        ------------------------------- -------- ----
+        SID                                      NUMBER
+        SEQ#                                     NUMBER
+        EVENT                                    VARCHAR2(64)
+        P1TEXT                                   VARCHAR2(64)
+        P1                                       NUMBER
+        P1RAW                                    RAW(4)
+        P2TEXT                                   VARCHAR2(64)
+        P2                                       NUMBER
+        P2RAW                                    RAW(4)
+        P3TEXT                                   VARCHAR2(64)
+        P3                                       NUMBER
+        P3RAW                                    RAW(4)
+        WAIT_TIME                                NUMBER
+        SECONDS_IN_WAIT                          NUMBER
+        STATE                                    VARCHAR2(19)
+SID indicates the process. SEQ# is a sequentially increasing number that starts at one for each process and increments each time the process begins a new wait. 
+The STATE column indicates how we should interpret the data in this row of the view. If the value in the STATE column is WAITING, then the process is currently waiting for an event. In this case, we can see information about the event and how long the process has been waiting so far. Otherwise, the process is currently not waiting, but we can see information about the last event that the process waited for. 
+
+EVENT is the name of a wait event. P1TEXT is the name of a parameter for the wait event, P1 is the value of the parameter, and P1RAW is the value in binary form. The P2 and P3 columns provide additional parameter information. 
+
+When the value in the STATE column is WAITING, the value in the WAIT_TIME column will be zero and SECONDS_IN_WAIT will show the number of seconds the process has been waiting for the event thus far. Note that SECONDS_IN_WAIT shows the time in seconds, not centiseconds. 
+
+When the value in the STATE column is WAITED KNOWN TIME, WAIT_TIME will show the length of the last wait (in centiseconds) and SECONDS_IN_WAIT will not be relevant. (It appears to be the number of seconds since the last wait began, but this is not clear.) The STATE could also be WAITED UNKNOWN TIME or WAITED SHORT TIME, the latter indicating that the last wait was less than one centisecond in duration. 
+
+The following query shows the parameters associated with the db file scattered read wait event: 
+
+        SQL> SELECT *    
+          2  FROM   v$event_name
+          3  WHERE  name = 'db file scattered read';
+        
+            EVENT# NAME
+        ---------- ----------------------------------------------------------------
+        PARAMETER1                PARAMETER2                PARAMETER3
+        ------------------------- ------------------------- -------------------------
+                95 db file scattered read
+        file#                     block#                    blocks
+
+        SQL>
+This tells us that when a process is waiting for a multi-block read from disk to complete (as in the case of a full table scan where the data blocks were not already in the buffer cache), we can see the file from which the blocks are being read as well as the starting block and number of blocks. 
+The following query was run while a session was performing a full table scan: 
+
+        SQL> SELECT * FROM v$session_wait WHERE sid = 16;
+
+               SID       SEQ# EVENT
+        ---------- ---------- ------------------------------
+        P1TEXT                                 P1 P1RAW
+        ------------------------------ ---------- --------
+        P2TEXT                                 P2 P2RAW
+        ------------------------------ ---------- --------
+        P3TEXT                                 P3 P3RAW     WAIT_TIME SECONDS_IN_WAIT
+        ------------------------------ ---------- -------- ---------- ---------------
+        STATE
+        -------------------
+                16        303 db file scattered read
+        file#                                  17 00000011 begin_of_the_skype_highlighting              17 00000011      end_of_the_skype_highlighting
+        block#                               2721 00000AA1
+        blocks                                  8 00000008         -1               0
+        WAITED SHORT TIME
+
+        SQL>
+You can see that the process was not waiting at the moment I ran this query, but its last wait had been for an I/O request to read eight blocks from file 17 starting at block 2721. That I/O request had completed in less than 0.01 second. (Note the -1 in the WAIT_TIME column when the STATE is WAITED SHORT TIME.) Why did Oracle choose to read eight blocks at a time? Because the db_file_multiblock_read_count instance parameter was set to eight. 
+System Event 10046 
+
+All DBAs should be familiar with the SQL trace facility built into Oracle. By using the commands below, you can enable SQL trace for an entire instance, your session only, or another session: 
+
+        ALTER SYSTEM SET sql_trace = TRUE;
+        ALTER SESSION SET sql_trace = TRUE;
+        EXECUTE SYS.dbms_system.set_sql_trace_in_session (sid, serial#, TRUE);
+When SQL trace is enabled for a session, the Oracle process writes detailed trace information (including timing data if timed statistics are enabled) to a trace file in a directory specified by the user_dump_dest instance parameter. These trace files are plain text files and human readable, but rather tedious and repetitive. You typically run trace files through a processor such as TKPROF instead of looking at them directly. 
+Oracle has provided a special system event that directs a process to include additional information in the trace file, including wait event information. Setting system events allows a DBA to instruct an Oracle instance to take on a special, atypical behavior. System events can be used, for example, to cause Oracle to write a system level dump file whenever an ORA-0600 error occurs or skip over corrupted blocks in a table when performing a full table scan. 
+
+System event 10046 affects the amount of information written to trace files. It can be set to the following values: 
+  System Event Setting Effect 
+10046 trace name context forever, level 1 Enables ordinary SQL trace 
+10046 trace name context forever, level 4 Enables SQL trace with bind variable values included in trace file 
+10046 trace name context forever, level 8 Enables SQL trace with wait event information included in trace file 
+10046 trace name context forever, level 12 Equivalent of level 4 and level 8 together 
+
+
+You can set the 10046 system event to trace your session and collect wait event information in the trace file with a command such as the following: 
+
+        ALTER SESSION SET events '10046 trace name context forever, level 8';
+You can set system events in another session by calling the SYS.DBMS_SYSTEM.SET_EV procedure or by using the oradebug facility. To use oradebug, you log onto the database as SYSDBA in SQL*Plus and run the "oradebug session_event" command. (If you are not familiar with the oradebug facility, you can type "oradebug help" for a list of available commands, but be careful!) 
+When you set system event 10046 to a level of 8 or 12, the process will write a line into the trace file every time it finishes waiting for an event. The line in the trace file will contain pretty much the same information that would have appeared in the v$session_wait view, but perhaps in a slightly less friendly format. You can also see in the trace file which cursor (and therefore which SQL statement) the wait event was associated with. 
+
+Here is an excerpt from a trace file generated by setting system event 10046 to level 12: 
+
+        =====================
+        PARSING IN CURSOR #1 len=80 dep=0 uid=502 oct=3 lid=502 
+        tim=2293771931 hv=2293373707 ad='511dca20'
+        SELECT /*+ FULL */ SUM (LENGTH(notes))
+        FROM   customer_calls
+        WHERE  status = :x
+        END OF STMT
+        PARSE #1:c=0,e=0,p=0,cr=0,cu=0,mis=1,r=0,dep=0,og=0,tim=2293771931
+        BINDS #1:
+         bind 0: dty=2 mxl=22(22) mal=00 scl=00 pre=00 oacflg=03 oacfl2=0 
+         size=24 offset=0
+           bfp=09717724 bln=22 avl=02 flg=05
+           value=43
+        EXEC #1:c=0,e=0,p=0,cr=0,cu=0,mis=0,r=0,dep=0,og=4,tim=2293771931
+        WAIT #1: nam='SQL*Net message to client' ela= 0 p1=675562835 p2=1 p3=0
+        WAIT #1: nam='db file scattered read' ela= 3 p1=17 p2=923 p3=8
+        WAIT #1: nam='db file scattered read' ela= 1 p1=17 p2=931 p3=8
+        WAIT #1: nam='db file scattered read' ela= 2 p1=17 p2=939 p3=8
+        WAIT #1: nam='db file sequential read' ela= 0 p1=17 p2=947 p3=1
+        WAIT #1: nam='db file scattered read' ela= 3 p1=17 p2=1657 p3=8
+        WAIT #1: nam='db file scattered read' ela= 1 p1=17 p2=1665 p3=8
+        WAIT #1: nam='db file scattered read' ela= 2 p1=17 p2=1673 p3=8
+        WAIT #1: nam='db file scattered read' ela= 0 p1=17 p2=1681 p3=8
+        WAIT #1: nam='db file scattered read' ela= 3 p1=17 p2=1761 p3=8
+        WAIT #1: nam='db file scattered read' ela= 1 p1=17 p2=1769 p3=8
+        WAIT #1: nam='db file scattered read' ela= 1 p1=17 p2=1777 p3=8
+        WAIT #1: nam='db file scattered read' ela= 0 p1=17 p2=1785 p3=8
+        WAIT #1: nam='db file scattered read' ela= 2 p1=17 p2=1841 p3=8
+        WAIT #1: nam='db file scattered read' ela= 1 p1=17 p2=1849 p3=8
+You can see that when the session executed the query, there was a wait shorter than one centisecond for a message to be sent to the client, followed by a bunch of waits for I/O requests against file 17. Most of the I/O requests were multi-block reads, reading eight blocks at a time while performing a full table scan of the customer_calls table. 
+Although the overhead of the tracing facility is quite high, it can be extremely helpful when tracking down specific performance problems. 
+
+How Wait Event Information Can Be Used to Boost System Performance 
+
+In the examples below we will apply the techniques described above for collecting wait event information, and we will evaluate the data in order to better understand how the system is functioning and determine what we can do to boost system performance. 
+
+Example #1: A Slow Web Page 
+
+A dynamic web page was taking too long to come up, and the bottleneck was isolated to a query that, when simplified for the purpose of this example, looked like this: 
+
+        SELECT COUNT (*)
+        FROM   customer_inquiries
+        WHERE  status_code = :b1
+        AND    status_date > :b2;
+The developer most familiar with the code thought there might be a problem with the database because the query was using an index and should therefore run quickly. Indeed, the execution plan did suggest that an index was being used. The execution plan generated by an EXPLAIN PLAN command looked like this: 
+        Execution Plan
+        ----------------------------------------------------------
+           0      SELECT STATEMENT Optimizer=CHOOSE
+           1    0   SORT (AGGREGATE)
+           2    1     TABLE ACCESS (BY INDEX ROWID) OF 'CUSTOMER_INQUIRIES'
+           3    2       INDEX (RANGE SCAN) OF 'CUSTOMER_INQUIRIES_N2' (NON-UNIQUE)
+The CUSTOMER_INQUIRIES_N2 index was a concatenated index on the STATUS_CODE and DISPOSITION columns. The STATUS_DATE column was not indexed. 
+A query against v$session_event after a user brought up the slow page in their browser yielded the following wait event information: 
+
+        EVENT                          TOTAL_WAITS TIME_WAITED
+        ------------------------------ ----------- -----------
+        db file scattered read                  15           3
+        db file sequential read               6209         140
+        latch free                               2           1
+        SQL*Net message to client                8           0
+        SQL*Net message from client              7       21285
+The high number of waits for the db file sequential read event suggested that the query was doing a lot of index lookups. Although the waits for I/O requests to complete only added up to 1.4 seconds, this does not take into account the CPU time required. If the server was CPU bound (which it was during peak load), the session could be stuck waiting for CPU time. Remember that wait events do not track time spent waiting for CPU. 
+Further research uncovered that the application ran slowest when querying on status code "12" and for good reason: over 90% of the rows in the customer_inquiries table had a status code of 12.  The rule of thumb goes that you shouldn't use an index when querying a table unless the index will only retrieve a very small percentage of the rows. 
+
+This turned out to be one of those cases where a full table scan was much faster than using an index. A full table scan allowed Oracle to read blocks from disk in fast multi-block I/Os instead of numerous single-block I/Os. It also enabled Oracle to inspect each data block only once instead of once for each row in the block as in the case of an index lookup. 
+
+Revising the query to defeat the index replaced the large number of db file sequential read waits with a smaller number of db file scattered read waits as follows: 
+
+        EVENT                          TOTAL_WAITS TIME_WAITED
+        ------------------------------ ----------- -----------
+        db file scattered read                 460          13
+        db file sequential read                  3           1
+        latch free                               1           0
+        SQL*Net message to client               10           0
+        SQL*Net message from client              9       18317
+Although the wait event interface does not show it, the full table scan approach also required less CPU time, leading to a much faster response time. 
+Example #2: Slow Batch Processing 
+
+The operations group noticed that its overnight batch processing was taking significantly longer after an additional data feed program was added to the nightly run schedule. The decision was made to add more processors to the database server to speed things up. Unfortunately, this did not do the trick; the programs ran at about the same overall speed as before. 
+
+The v$system_event view can come in handy in situations like this in order to take a quick glance at the overall system. By making a copy of the view's contents at two separate points in time, you can get a high level summary of what processes were waiting for during the time interval. Here is an extremely basic SQL*Plus script that displays the wait event activity for the instance over a 30 second time interval: 
+
+        CREATE TABLE previous_events
+        AS
+        SELECT SYSDATE timestamp, v$system_event.*
+        FROM   v$system_event;
+
+        EXECUTE dbms_lock.sleep (30);
+
+        SELECT   A.event, 
+                 A.total_waits - NVL (B.total_waits, 0) total_waits,
+                 A.time_waited - NVL (B.time_waited, 0) time_waited
+        FROM     v$system_event A, previous_events B
+        WHERE    B.event (+) = A.event
+        ORDER BY A.event;
+Of course, you could use Statspack, utlbstat, or any number of other tools out there to capture this information as well. 
+Running the above script while the batch programs were running generated the following output: 
+
+        EVENT                          TOTAL_WAITS TIME_WAITED
+        ------------------------------ ----------- -----------
+        LGWR wait for redo copy                115          41
+        buffer busy waits                       53          26
+        control file parallel write             45          44
+        control file sequential read            25           0
+        db file scattered read                 932         107
+        db file sequential read              76089        6726
+        direct path read                       211          19
+        direct path write                      212          15
+        enqueue                                 37        5646
+        file identify                            2           0
+        file open                               37           0
+        free buffer waits                       11         711
+        latch free                              52          44
+        log buffer space                         2           8
+        log file parallel write               4388        1047
+        log file sequential read               153          91
+        log file single write                    2           6
+        log file switch completion               2          24
+        write complete waits                     6         517
+The idle events have been removed for clarity. What stands out here is the enqueue wait event. During the 30 second time interval, processes collectively spent over 56 seconds waiting for enqueues, or locks that you can see in v$lock. The most common types of locks to show up in an enqueue wait are the table-level lock (TM) and the transaction enqueue or row-level lock (TX). 
+The parameters for the enqueue wait event provide information about the type and location of the lock waited upon, but the information is fairly obscure. The first two bytes of P1RAW are the ASCII codes of the lock type, and the last two bytes are the requested lock mode. P2 and P3 correspond to the ID1 and ID2 columns in the v$lock view. 
+
+In order to get a sense of where the locking contention was coming from, I used the oradebug facility in SQL*Plus to activate system event 10046 for one of the batch programs as it was running. Since tracing incurs a lot of overhead, this significantly slowed down batch processing. But this was only done once, and with the greater good of eliminating the contention problems in mind. 
+
+To activate event 10046, I looked at v$session and v$process to find the Oracle PID of the dedicated server process running one of the batch programs. Then I ran the following commands in SQL*Plus: 
+
+        SQL> oradebug setorapid 13
+        Unix process pid: 19751, image: oracle@dbserver.acme.com (TNS V1-V3)
+        SQL> oradebug session_event 10046 trace name context forever, level 8
+        Statement processed.
+        SQL>
+This caused the dedicated server process to begin writing a trace file including wait event information. An excerpt from the trace file is as follows: 
+        EXEC #5:c=0,e=0,p=3,cr=2,cu=1,mis=0,r=1,dep=1,og=4,tim=2313020980
+        XCTEND rlbk=0, rd_only=0
+        WAIT #1: nam='write complete waits' ela= 11 p1=3 p2=2 p3=0
+        WAIT #4: nam='db file sequential read' ela= 4 p1=10 p2=12815 p3=1
+        WAIT #4: nam='db file sequential read' ela= 1 p1=10 p2=12865 p3=1
+        WAIT #4: nam='db file sequential read' ela= 5 p1=3 p2=858 p3=1
+        =====================
+        PARSING IN CURSOR #4 len=65 dep=1 uid=502 oct=6 lid=502 
+        tim=2313021001 hv=417623354 ad='55855844'
+        UPDATE CUSTOMER_CALLS SET ATTR_3 = :b1 WHERE CUSTOMER_CALL_ID=:b2
+        END OF STMT
+        EXEC #4:c=1,e=10,p=3,cr=2,cu=3,mis=0,r=1,dep=1,og=4,tim=2313021001
+        WAIT #5: nam='db file sequential read' ela= 0 p1=10 p2=5789 p3=1
+        WAIT #5: nam='enqueue' ela= 307 p1=1415053318 p2=196705 p3=6744
+        WAIT #5: nam='enqueue' ela= 307 p1=1415053318 p2=196705 p3=6744
+        WAIT #5: nam='enqueue' ela= 53 p1=1415053318 p2=196705 p3=6744
+        WAIT #5: nam='db file sequential read' ela= 0 p1=10 p2=586 p3=1
+        WAIT #5: nam='db file sequential read' ela= 1 p1=3 p2=858 p3=1
+        EXEC #5:c=0,e=668,p=3,cr=5,cu=3,mis=0,r=1,dep=1,og=4,tim=2313021669
+We can see the enqueue wait events pretty clearly. Using the magical decoder ring on the P1 values, we can see that Oracle was waiting on TX locks requested in mode 6 (exclusive mode). (1415053318 is 54580006 in hexadecimal. The 54 corresponds to a "T", the 58 to an "X", and 0006 is exclusive mode. Look up the v$lock view in the Server Reference Guide for a list of lock types and modes.) 
+What is not clear from the excerpt above is what table and row the process was trying to lock when it had to wait. If we were looking at the database while the lock contention was happening, we could look at the v$locked_object view, or the ROW_WAIT_OBJ# and ROW_WAIT_ROW# columns of v$session. But since all I had to work with was the contents of the trace file, I could see that the waits occurred while processing cursor number five. Searching backwards through the trace file I found the exact SQL statement that corresponded to cursor number five at the time of the lock contention. 
+
+This turned out to be enough information to diagnose the contention problem and develop a workaround. By using autonomous transactions, we were able to modify the batch programs that were contending with each other so that they held locks on critical path rows for extremely short periods of time. Adjusting the schedules of the programs in the nightly run schedule also helped. 
+
+Example #3: A Slow Client/Server Application 
+
+A client/server application was taking several seconds to bring up a certain screen. The users complained constantly, and the developers were confounded because the delay was occurring before the user had any chance to kick off a query. The only thing happening in the form on startup was some fetching of basic reference data. All of the SQL had been tuned and was known to work very quickly. Being frequently accessed reference data, the data blocks were likely to be in the buffer cache--eliminating slow I/O as a possible bottleneck. 
+
+Looking at v$session_event for a user who had just logged on to the application but not yet begun any activities showed almost 20,000 waits on the SQL*Net message from client event, totaling over 300 seconds of waiting. This is an idle event, which we would typically ignore, but something seemed wrong and warranted further investigation. 
+
+A process waits on the SQL*Net message from client event when it has completed a request from a user and now needs to wait for the next request. You typically see high wait times on this event in front-end applications that spend a lot of time waiting for a user to submit a query or initiate some other action that requires database activity. So the 300 seconds of wait time here did not seem unusual, but the high number of waits did not seem right. 
+
+The application code was modified in a test environment so that it would disable timed statistics for the session after all initialization was complete. This caused the time information in v$session_event to reflect wait times during the form startup phase only; the time spent waiting for a user to initiate an action would be excluded because timed statistics would be disabled at that point. 
+
+Running the modified application yielded the following information in v$session_event: 
+
+        EVENT                          TOTAL_WAITS TIME_WAITED
+        ------------------------------ ----------- -----------
+        SQL*Net message to client            18520           6
+        SQL*Net message from client          18519        1064
+A fetch of a few pertinent session statistics from v$sesstat showed the following: 
+        NAME                                VALUE
+        ------------------------------ ----------
+        session logical reads                9295
+        CPU used by this session               82
+        physical reads                          0
+The data suggested that when the application started up, it was spending over 10 seconds performing more than 18,000 network roundtrips. The database server was using a little under one second of CPU time to perform 9,295 logical reads of data blocks that were already in the buffer cache. 
+A closer inspection of the reference data being retrieved by the application revealed 9,245 rows of reference data. The application code was fetching the data from cursors one row at a time. This resulted in two network roundtrips and one logical read for each row fetched. 
+
+The application was modified to use Oracle's array processing interface in order to fetch 100 rows at a time. This sped up the application dramatically by reducing network roundtrips. An additional benefit was that CPU usage on the database server was reduced because only about one logical read per data block was required, instead of one logical read per row retrieved. 
+
+When fetching 100 rows at a time, the waits and session statistics looked like this: 
+
+        EVENT                          TOTAL_WAITS TIME_WAITED
+        ------------------------------ ----------- -----------
+        SQL*Net message to client              200           0
+        SQL*Net message from client            199          28
+
+        NAME                                VALUE
+        ------------------------------ ----------
+        session logical reads                 135
+        CPU used by this session                3
+        physical reads                          0
+By fetching rows up to 100 at a time, we were able to dramatically improve response time by reducing network roundtrips--and reduce CPU usage on the database server at the same time. 
+Example #4: A Floundering Database Server 
+
+The DBA group discovered that one of the database servers was completely overwhelmed. We've all experienced this before: Connecting to the database took a few seconds, selecting from SYS.DUAL took more than a second... everything on this system ran very slowly. A look at v$system_event showed the following most waited-upon events: 
+
+        EVENT                               TIME_WAITED
+        ------------------------------ ----------------
+        SQL*Net message to client                174398
+        log file parallel write                  297297
+        log file sync                            326284
+        write complete waits                     402284
+        control file parallel write              501697
+        db file scattered read                   612671
+        db file sequential read                 2459961
+        pmon timer                             31839833
+        smon timer                             31974216
+        db file parallel write               1353916234
+        rdbms ipc message                    6579264389
+        latch free                           8161581692
+        SQL*Net message from client         15517359160
+Most of the events with long wait times were either idle events or I/O events. However, the latch free figure seemed astronomical: The instance had only been running for seven days! A query against v$latch_misses revealed the following: 
+        PARENT_NAME                    SUM(LONGHOLD_COUNT)
+        ------------------------------ -------------------
+        redo writing                                   238
+        redo allocation                                373
+        Active checkpoint queue latch                  377
+        mostly latch-free SCN                          458
+        redo copy                                      482
+        enqueue hash chains                            614
+        enqueues                                       637
+        Checkpoint queue latch                         790
+        session allocation                            1131
+        messages                                      1328
+        session idle bit                              2106
+        latch wait list                               5977
+        modify parameter values                       6242
+        cache buffers chains                          9876
+        row cache objects                            38899
+        cache buffers lru chain                     125352
+        shared pool                                4041451
+        library cache                              4423229
+This data suggested that the database was suffering from severe latch contention in the library cache. The shared pool was sized at 400 Mb. A look at v$sql showed over 36,000 SQL statements in the shared SQL area, almost all of which had been executed exactly once. Clearly, the application was embedding literal values in SQL statements instead of using bind variables, causing constant misses in the library cache and a steady churn of SQL statements through the shared SQL area. 
+A common reaction to excessive misses in the library cache is to increase the size of the shared pool. If the application does not use bind variables, however, this is a losing proposition. Without bind variables (and without setting the cursor_sharing instance parameter to FORCE) there will be a steady stream of distinct SQL statements and library cache misses. The larger the shared pool, the more SQL statements Oracle has to search for a match, and the longer the LRU list Oracle has to maintain. 
+
+By reducing the size of the shared pool from 400 Mb to 100 Mb, we were able to reduce the amount of time Oracle spent managing the library cache and thereby reduce latch contention and boost performance. Since we kept the shared pool large enough to hold the few SQL statements that were executed multiple times, the library cache hit ratio did not change. 
+
+Conclusion 
+
+Because wait events touch all areas of Oracle server operation, the wait event interface can give you insights into just about any kind of performance problem you might experience. Other metrics such as cache hit ratios can give you valuable information, but it is the wait event interface that ties everything together. In the examples discussed here, wait event data pointed us in the right direction to continue our research in diagnosing each problem. 
+
+The wait event interface with its four dynamic performance views and one system event enable you to see how an Oracle process is spending its time when it is not using the CPU. While wait event information may not give you everything you would need to cure every performance problem, the wait event interface does give the DBA access to a wealth of information that can point you in the right direction on the path to better system performance. 
+
+About the Author 
+
+Roger Schrag has been an Oracle DBA and application architect for over twelve years. He started out at Oracle Corporation on the Oracle Financials development team and moved into the roles of production DBA and database architect at various companies in the San Francisco Bay Area. Roger is a frequent speaker at Oracle OpenWorld and the IOUG Live! conferences. He is also vice-president of the Northern California Oracle Users Group.
+
+
+Still Looking for Help on this Subject?
+Get a Consultation
+We would be happy to talk with you about our services and how our senior-level database team might help you. Call Database Specialists at 415-344-0500 begin_of_the_skype_highlighting              415-344-0500      end_of_the_skype_highlighting or 888-648-0500 begin_of_the_skype_highlighting              888-648-0500      end_of_the_skype_highlighting or fill out a free consultation request form. 
+Complimentary Newsletter
+If you'd like to receive our complimentary monthly newsletter with database tips and new white paper announcements, sign up for The Specialist. 
+
+
+
+
+Copyright © 2005 Database Specialists, Inc. http://www.dbspecialists.com 
